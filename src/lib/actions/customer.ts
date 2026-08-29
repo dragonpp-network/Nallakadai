@@ -161,6 +161,7 @@ export async function getStoreCatalogAction(rawPhone: string) {
     cycleId: cycle?.id,
     categories: store.categories.filter((c) => c.active),
     brands: store.brands.filter((b) => b.active),
+    coupons: (store.coupons || []).filter((cp: any) => cp.active),
     items: catalogItems,
     currentOrder: currentOrder
       ? {
@@ -169,6 +170,8 @@ export async function getStoreCatalogAction(rawPhone: string) {
           deliveryMode: currentOrder.delivery_mode,
           deliveryAddress: currentOrder.delivery_address,
           note: currentOrder.note,
+          couponCode: (currentOrder as any).coupon_code || null,
+          discountAmount: (currentOrder as any).discount_amount || 0,
           order_items: (currentOrder.lines || []).map((l: any) => ({
             item_id: l.item_id,
             qty: l.qty,
@@ -183,6 +186,8 @@ export async function getStoreCatalogAction(rawPhone: string) {
       ? {
           id: previousOrder.id,
           orderNo: previousOrder.order_no,
+          couponCode: (previousOrder as any).coupon_code || null,
+          discountAmount: (previousOrder as any).discount_amount || 0,
           order_items: (previousOrder.lines || []).map((l: any) => ({
             item_id: l.item_id,
             qty: l.qty,
@@ -197,6 +202,44 @@ export async function getStoreCatalogAction(rawPhone: string) {
 }
 
 /**
+ * Validate Coupon Code against Cart Total
+ */
+export async function validateCouponAction(code: string, cartTotal: number) {
+  const store = getLocalStore();
+  const cleanCode = (code || "").toUpperCase().trim();
+  const coupon = (store.coupons || []).find((c: any) => c.code === cleanCode && c.active);
+
+  if (!coupon) {
+    return { valid: false, message: "Invalid or expired coupon code." };
+  }
+
+  if (cartTotal < (coupon.min_order_value || 0)) {
+    return {
+      valid: false,
+      message: `Minimum order amount of ₹${coupon.min_order_value} required for code ${coupon.code}.`,
+    };
+  }
+
+  let discount = 0;
+  if (coupon.discount_type === "percentage") {
+    discount = Math.round((cartTotal * (coupon.discount_value / 100)) * 100) / 100;
+    if (coupon.max_discount && discount > coupon.max_discount) {
+      discount = coupon.max_discount;
+    }
+  } else {
+    discount = Math.min(coupon.discount_value, cartTotal);
+  }
+
+  return {
+    valid: true,
+    code: coupon.code,
+    description: coupon.description,
+    discountAmount: Math.round(discount * 100) / 100,
+    newTotal: Math.max(0, Math.round((cartTotal - discount) * 100) / 100),
+  };
+}
+
+/**
  * Submit or In-Place Update Customer Order
  */
 export async function submitCustomerOrderAction(data: {
@@ -206,6 +249,8 @@ export async function submitCustomerOrderAction(data: {
   address: string;
   preferredTime?: string;
   note?: string;
+  couponCode?: string;
+  discountAmount?: number;
   lines: { itemId: string; qty: number }[];
 }) {
   const store = getLocalStore();
@@ -241,6 +286,8 @@ export async function submitCustomerOrderAction(data: {
     delivery_mode: data.deliveryMode,
     delivery_address: data.address,
     status: "Placed",
+    coupon_code: data.couponCode || null,
+    discount_amount: Number(data.discountAmount || 0),
     created_at: existingIdx >= 0 ? store.orders[existingIdx].created_at : new Date().toISOString(),
     updated_at: new Date().toISOString(),
     lines: orderLines,

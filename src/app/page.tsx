@@ -8,6 +8,7 @@ import {
   submitCustomerOrderAction,
   getCustomerOrderHistoryAction,
   cancelCustomerOrderAction,
+  validateCouponAction,
   type LookupResult,
 } from "@/lib/actions/customer";
 import { validateQty } from "@/lib/validation";
@@ -23,6 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { GenericProduceImage } from "@/components/ui/image-uploader";
+import { LottieAnimation } from "@/components/ui/lottie-animation";
 import {
   Home,
   ShoppingBag,
@@ -53,6 +55,8 @@ import {
   LogOut,
   Tag,
   Award,
+  TicketPercent,
+  Percent,
 } from "lucide-react";
 import { toast } from "sonner";
 import { BrandSplit } from "@/components/brand/BrandSplit";
@@ -84,6 +88,13 @@ export default function StorefrontPage() {
   const [address, setAddress] = useState("");
   const [preferredTime, setPreferredTime] = useState("");
   const [note, setNote] = useState("");
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    discountAmount: number;
+    description: string;
+  } | null>(null);
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [historyOrders, setHistoryOrders] = useState<any[]>([]);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
@@ -269,6 +280,8 @@ export default function StorefrontPage() {
   function handleClearCart() {
     setCart({});
     setEditingOrderNo(null);
+    setAppliedCoupon(null);
+    setCouponInput("");
     toast.info("Cart cleared");
   }
 
@@ -287,8 +300,47 @@ export default function StorefrontPage() {
       .filter(Boolean) as { item: any; qty: number; lineTotal: number }[];
   }, [cart, storeData]);
 
-  const totalAmount = cartLines.reduce((sum, l) => sum + l.lineTotal, 0);
+  const subtotalAmount = cartLines.reduce((sum, l) => sum + l.lineTotal, 0);
+  const discountAmount = appliedCoupon ? Math.min(appliedCoupon.discountAmount, subtotalAmount) : 0;
+  const totalAmount = Math.max(0, Math.round((subtotalAmount - discountAmount) * 100) / 100);
   const totalItemCount = cartLines.length;
+
+  async function handleApplyCoupon(codeToApply?: string) {
+    const code = (codeToApply || couponInput).trim();
+    if (!code) {
+      toast.error("Please enter a coupon code");
+      return;
+    }
+    if (subtotalAmount <= 0) {
+      toast.error("Add items to your cart before applying a coupon.");
+      return;
+    }
+    setApplyingCoupon(true);
+    try {
+      const res = await validateCouponAction(code, subtotalAmount);
+      if (res.valid) {
+        setAppliedCoupon({
+          code: res.code!,
+          discountAmount: res.discountAmount!,
+          description: res.description!,
+        });
+        setCouponInput(res.code!);
+        toast.success(`🎉 Coupon ${res.code} applied! Saved ₹${res.discountAmount}`);
+      } else {
+        toast.error(res.message || "Invalid coupon code");
+      }
+    } catch (err: any) {
+      toast.error("Failed to validate coupon");
+    } finally {
+      setApplyingCoupon(false);
+    }
+  }
+
+  function handleRemoveCoupon() {
+    setAppliedCoupon(null);
+    setCouponInput("");
+    toast.info("Coupon removed");
+  }
 
   const filteredItems = useMemo(() => {
     if (!storeData?.items) return [];
@@ -324,6 +376,8 @@ export default function StorefrontPage() {
         address,
         preferredTime,
         note,
+        couponCode: appliedCoupon?.code,
+        discountAmount: discountAmount,
         lines: cartLines.map((l) => ({ itemId: l.item.itemId, qty: l.qty })),
       });
 
@@ -331,14 +385,19 @@ export default function StorefrontPage() {
         orderNo: res.orderNo,
         deliveryDate: res.deliveryDate,
         isUpdate: res.isUpdate,
+        subtotalAmount,
+        discountAmount,
+        couponCode: appliedCoupon?.code,
         totalAmount,
         itemCount: cartLines.length,
         lines: cartLines,
       });
 
-      // 🧹 EMPTY THE CART AFTER SUCCESSFUL ORDER PLACEMENT
+      // 🧹 EMPTY THE CART & COUPON AFTER SUCCESSFUL ORDER PLACEMENT
       setCart({});
       setEditingOrderNo(null);
+      setAppliedCoupon(null);
+      setCouponInput("");
 
       setConfirmationModalOpen(true);
       toast.success(res.isUpdate ? `Order ${res.orderNo} updated successfully!` : `Order ${res.orderNo} confirmed!`);
@@ -860,7 +919,10 @@ export default function StorefrontPage() {
 
             {/* Categorized Produce List */}
             {storeLoading ? (
-              <div className="py-16 text-center text-sm text-muted-foreground animate-pulse">Loading harvest catalogue...</div>
+              <div className="py-16 text-center text-sm text-muted-foreground flex flex-col items-center justify-center gap-2">
+                <LottieAnimation className="w-36 h-36" />
+                <span className="font-tamil text-xs">அறுவடை பொருட்கள் பட்டியல் ஏற்றப்படுகிறது...</span>
+              </div>
             ) : filteredItems.length === 0 ? (
               <div className="rounded-3xl bg-card p-10 text-center text-muted-foreground border shadow-sm">
                 No produce found matching your filters.
@@ -902,10 +964,12 @@ export default function StorefrontPage() {
                             )}
 
                             {lookup.branch.showPrices && (
-                              <p className="mt-1.5 text-base font-extrabold text-primary">
-                                ₹{item.price}{" "}
-                                <span className="text-xs font-normal text-muted-foreground">/ {item.unit}</span>
-                              </p>
+                              <div className="mt-1.5 flex items-baseline gap-1.5 flex-wrap">
+                                <p className="text-base font-extrabold text-primary">
+                                  ₹{item.price}{" "}
+                                  <span className="text-xs font-normal text-muted-foreground">/ {item.unit}</span>
+                                </p>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -1088,6 +1152,81 @@ export default function StorefrontPage() {
                   ))}
                 </div>
 
+                {/* Coupon Code Redemption Box */}
+                <div className="rounded-3xl bg-card p-4 sm:p-5 border shadow-sm space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    <TicketPercent className="h-4 w-4 text-primary" />
+                    <span>Apply Promo / Coupon Code</span>
+                  </div>
+
+                  {appliedCoupon ? (
+                    <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/30 p-3.5 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-9 w-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                          <Percent className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <div className="font-mono font-bold text-sm text-emerald-950 flex items-center gap-1.5">
+                            <span>{appliedCoupon.code}</span>
+                            <Badge className="bg-emerald-600 text-white text-[9px] py-0 px-1.5">Applied</Badge>
+                          </div>
+                          <div className="text-xs text-emerald-800 font-medium">
+                            {appliedCoupon.description} (Saved ₹{discountAmount.toFixed(2)})
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleRemoveCoupon}
+                        className="h-8 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl"
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      <div className="flex gap-2">
+                        <Input
+                          value={couponInput}
+                          onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                          placeholder="Enter code (e.g. WELCOME10)"
+                          className="rounded-2xl font-mono text-xs uppercase h-11"
+                        />
+                        <Button
+                          type="button"
+                          onClick={() => handleApplyCoupon()}
+                          disabled={applyingCoupon || !couponInput.trim()}
+                          className="rounded-2xl bg-primary text-white font-bold text-xs h-11 px-5 shadow"
+                        >
+                          {applyingCoupon ? "Applying..." : "Apply"}
+                        </Button>
+                      </div>
+
+                      {/* Quick Available Offers */}
+                      {storeData?.coupons && storeData.coupons.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                          <span className="text-[11px] text-muted-foreground">Available offers:</span>
+                          {storeData.coupons.map((cp: any) => (
+                            <button
+                              key={cp.id}
+                              type="button"
+                              onClick={() => handleApplyCoupon(cp.code)}
+                              className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 border border-amber-500/20 px-2.5 py-1 rounded-xl transition"
+                            >
+                              <Sparkles className="h-3 w-3 text-amber-600" />
+                              <span>{cp.code}</span>
+                              <span className="text-[10px] opacity-75">
+                                ({cp.discount_type === "percentage" ? `${cp.discount_value}%` : `₹${cp.discount_value}`})
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 {/* Delivery Mode & Address Card */}
                 <div className="rounded-3xl bg-card p-4 sm:p-5 border shadow-sm space-y-4">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -1149,6 +1288,24 @@ export default function StorefrontPage() {
                       placeholder="e.g. Leave with security, call on arrival"
                       className="mt-1 rounded-2xl text-sm h-11"
                     />
+                  </div>
+                </div>
+
+                {/* Cart Subtotal, Discount & Final Bill */}
+                <div className="rounded-3xl bg-card p-4 sm:p-5 border shadow-sm space-y-2">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Subtotal ({cartLines.length} Items):</span>
+                    <span className="font-semibold text-foreground font-mono">₹{subtotalAmount.toFixed(2)}</span>
+                  </div>
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between text-xs text-emerald-700 font-semibold">
+                      <span>Promo Discount ({appliedCoupon?.code}):</span>
+                      <span className="font-mono">-₹{discountAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm font-bold pt-2 border-t text-foreground">
+                    <span>Estimated Total:</span>
+                    <span className="text-lg text-primary font-mono font-extrabold">₹{totalAmount.toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -1370,9 +1527,7 @@ export default function StorefrontPage() {
       {/* Order Confirmed / Updated Receipt Modal */}
       <Dialog open={confirmationModalOpen} onOpenChange={setConfirmationModalOpen}>
         <DialogContent className="rounded-3xl max-w-sm text-center">
-          <div className="mx-auto my-2 flex h-14 w-14 items-center justify-center rounded-3xl bg-emerald-100 text-emerald-600 shadow-inner">
-            <Check className="h-7 w-7 stroke-[3]" />
-          </div>
+          <LottieAnimation className="w-36 h-36 mx-auto" />
 
           <DialogTitle className="font-serif text-2xl font-bold text-foreground">
             {confirmedOrderDetails?.isUpdate ? "Order Updated!" : "Order Confirmed!"}
@@ -1388,9 +1543,15 @@ export default function StorefrontPage() {
               <span className="text-muted-foreground">Scheduled Delivery:</span>
               <span className="font-semibold text-foreground">{confirmedOrderDetails?.deliveryDate}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Tentative Amount:</span>
-              <span className="font-bold text-foreground">₹{confirmedOrderDetails?.totalAmount?.toFixed(2)}</span>
+            {confirmedOrderDetails?.discountAmount > 0 && (
+              <div className="flex justify-between text-emerald-700 font-semibold">
+                <span>Coupon ({confirmedOrderDetails?.couponCode}):</span>
+                <span>-₹{confirmedOrderDetails?.discountAmount?.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between border-t pt-1.5 font-bold">
+              <span className="text-muted-foreground">Estimated Amount:</span>
+              <span className="text-primary font-mono text-sm">₹{confirmedOrderDetails?.totalAmount?.toFixed(2)}</span>
             </div>
           </div>
 

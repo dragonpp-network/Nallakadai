@@ -23,6 +23,7 @@ import {
   FolderTree,
   Award,
   Store,
+  TicketPercent,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -39,6 +40,7 @@ const navItems = [
   { label: "Brand Partners", href: "/admin/brands", icon: Award },
   { label: "Store Operators", href: "/admin/users", icon: UserCog },
   { label: "Master Items", href: "/admin/items", icon: Package },
+  { label: "Coupons & Offers", href: "/admin/coupons", icon: TicketPercent },
   { label: "Non-Collection", href: "/admin/non-collection", icon: AlertTriangle },
   { label: "Branches", href: "/admin/branches", icon: Building2 },
   { label: "Reports", href: "/admin/reports", icon: BarChart3 },

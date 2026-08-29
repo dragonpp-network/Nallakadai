@@ -673,6 +673,11 @@ export async function saveMasterItemAction(
   await requireAdmin(userId);
   const store = getLocalStore();
 
+  const procurementCost = Number(itemData.procurementCost || itemData.procurement_cost || 0);
+  const sellingPrice = Number(itemData.sellingPrice || itemData.selling_price || itemData.price || 50);
+  const discountPercent = Number(itemData.discountPercent || itemData.discount_percent || 0);
+  const netPrice = Math.round((sellingPrice - (sellingPrice * discountPercent) / 100) * 100) / 100;
+
   if (itemData.id) {
     const idx = store.items.findIndex((i) => i.id === itemData.id);
     if (idx >= 0) {
@@ -687,6 +692,10 @@ export async function saveMasterItemAction(
         presets: itemData.presets,
         min_qty: itemData.minQty,
         max_qty: itemData.maxQty,
+        procurement_cost: procurementCost,
+        selling_price: sellingPrice,
+        discount_percent: discountPercent,
+        price: netPrice,
         active: itemData.active,
       };
     }
@@ -702,12 +711,80 @@ export async function saveMasterItemAction(
       presets: itemData.presets,
       min_qty: itemData.minQty,
       max_qty: itemData.maxQty,
-      price: 50,
+      procurement_cost: procurementCost,
+      selling_price: sellingPrice,
+      discount_percent: discountPercent,
+      price: netPrice,
       active: itemData.active,
     });
   }
 
   saveLocalStore(store);
+  return { success: true };
+}
+
+/**
+ * Coupon Codes Management
+ */
+export async function getAdminCouponsAction() {
+  const store = getLocalStore();
+  return store.coupons || [];
+}
+
+export async function saveAdminCouponAction(
+  userId: string = DEFAULT_SUPER_ADMIN_ID,
+  couponData: any
+) {
+  await requireAdmin(userId);
+  const store = getLocalStore();
+  if (!store.coupons) store.coupons = [];
+
+  const code = (couponData.code || "").toUpperCase().trim();
+  const discountValue = Number(couponData.discountValue || couponData.discount_value || 0);
+  const minOrderValue = Number(couponData.minOrderValue || couponData.min_order_value || 0);
+  const maxDiscount = Number(couponData.maxDiscount || couponData.max_discount || discountValue);
+
+  if (couponData.id) {
+    const idx = store.coupons.findIndex((c) => c.id === couponData.id);
+    if (idx >= 0) {
+      store.coupons[idx] = {
+        ...store.coupons[idx],
+        code,
+        description: couponData.description,
+        discount_type: couponData.discountType || "percentage",
+        discount_value: discountValue,
+        min_order_value: minOrderValue,
+        max_discount: maxDiscount,
+        active: couponData.active !== undefined ? couponData.active : true,
+      };
+    }
+  } else {
+    store.coupons.push({
+      id: `c0000000-000${store.coupons.length + 1}-4111-8111-111111111111`,
+      code,
+      description: couponData.description,
+      discount_type: couponData.discountType || "percentage",
+      discount_value: discountValue,
+      min_order_value: minOrderValue,
+      max_discount: maxDiscount,
+      active: couponData.active !== undefined ? couponData.active : true,
+    });
+  }
+
+  saveLocalStore(store);
+  return { success: true };
+}
+
+export async function deleteAdminCouponAction(
+  userId: string = DEFAULT_SUPER_ADMIN_ID,
+  couponId: string
+) {
+  await requireAdmin(userId);
+  const store = getLocalStore();
+  if (store.coupons) {
+    store.coupons = store.coupons.filter((c) => c.id !== couponId);
+    saveLocalStore(store);
+  }
   return { success: true };
 }
 
