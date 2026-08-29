@@ -144,6 +144,9 @@ export async function getStoreCatalogAction(rawPhone: string) {
         presets: item.presets,
         minQty: ci?.min_qty ?? item.min_qty,
         maxQty: ci?.max_qty ?? item.max_qty,
+        procurementCost: ci?.procurement_cost ?? item.procurement_cost,
+        sellingPrice: ci?.selling_price ?? item.selling_price,
+        discountPercent: ci?.discount_percent ?? item.discount_percent,
         price: ci ? ci.price : item.price,
         soldOut: false,
       };
@@ -172,14 +175,17 @@ export async function getStoreCatalogAction(rawPhone: string) {
           note: currentOrder.note,
           couponCode: (currentOrder as any).coupon_code || null,
           discountAmount: (currentOrder as any).discount_amount || 0,
-          order_items: (currentOrder.lines || []).map((l: any) => ({
-            item_id: l.item_id,
-            qty: l.qty,
-            name_en: l.name_en,
-            name_ta: l.name_ta,
-            unit: l.unit,
-            price: l.price,
-          })),
+          order_items: (currentOrder.lines || []).map((l: any) => {
+            const master = store.items.find((i) => i.id === l.item_id);
+            return {
+              item_id: l.item_id,
+              qty: l.qty,
+              name_en: master?.name_en || l.name_en,
+              name_ta: master?.name_ta || l.name_ta,
+              unit: master?.unit || l.unit,
+              price: master ? master.price : l.price,
+            };
+          }),
         }
       : null,
     previousOrder: previousOrder
@@ -220,84 +226,108 @@ export async function validateCouponAction(code: string, cartTotal: number) {
     };
   }
 
-  let discount = 0;
+  let discountAmount = 0;
   if (coupon.discount_type === "percentage") {
-    discount = Math.round((cartTotal * (coupon.discount_value / 100)) * 100) / 100;
-    if (coupon.max_discount && discount > coupon.max_discount) {
-      discount = coupon.max_discount;
+    discountAmount = (cartTotal * coupon.discount_value) / 100;
+    if (coupon.max_discount && discountAmount > coupon.max_discount) {
+      discountAmount = coupon.max_discount;
     }
   } else {
-    discount = Math.min(coupon.discount_value, cartTotal);
+    discountAmount = coupon.discount_value;
   }
+
+  discountAmount = Math.min(discountAmount, cartTotal);
+  discountAmount = Math.round(discountAmount * 100) / 100;
 
   return {
     valid: true,
     code: coupon.code,
+    discountAmount,
     description: coupon.description,
-    discountAmount: Math.round(discount * 100) / 100,
-    newTotal: Math.max(0, Math.round((cartTotal - discount) * 100) / 100),
   };
 }
 
 /**
- * Submit or In-Place Update Customer Order
+ * Submit / Update Order for Customer
  */
 export async function submitCustomerOrderAction(data: {
   mobile: string;
-  cycleId: string;
-  deliveryMode: "Door Delivery" | "Customer Pickup";
-  address: string;
+  cycleId?: string;
+  deliveryMode?: "Door Delivery" | "Customer Pickup";
+  address?: string;
   preferredTime?: string;
   note?: string;
   couponCode?: string;
   discountAmount?: number;
   lines: { itemId: string; qty: number }[];
 }) {
-  const store = getLocalStore();
   const mobile = normaliseMobile(data.mobile);
+  const store = getLocalStore();
+
   const customer = store.customers.find((c) => normaliseMobile(c.mobile) === mobile);
   if (!customer) throw new Error("Customer not found");
 
-  const cycle = store.cycles.find((c) => c.id === data.cycleId) || store.cycles[0];
+  const branch = store.branches.find((b) => b.id === customer.branch_id) || store.branches[0];
+  const cycle = data.cycleId
+    ? store.cycles.find((c) => c.id === data.cycleId)
+    : store.cycles.find((c) => c.branch_id === branch.id) || store.cycles[0];
 
-  const orderLines = data.lines.map((l) => {
-    const item = store.items.find((i) => i.id === l.itemId);
-    const ci = store.cycle_items.find((c_i) => c_i.cycle_id === cycle.id && c_i.item_id === l.itemId);
-    return {
-      item_id: l.itemId,
-      name_en: item?.name_en || "Item",
-      name_ta: item?.name_ta || "",
-      unit: item?.unit || "Kg",
-      qty: l.qty,
-      price: ci ? ci.price : item?.price || 50,
-    };
-  });
+  if (!cycle) throw new Error("No active harvest cycle found for this branch.");
 
-  const existingIdx = store.orders.findIndex((o) => o.cycle_id === cycle.id && o.customer_id === customer.id && o.status === "Placed");
+  // Check if existing placed order in this cycle
+  const existingIdx = store.orders.findIndex(
+    (o) => o.customer_id === customer.id && o.cycle_id === cycle.id && o.status === "Placed"
+  );
 
-  const orderNo = existingIdx >= 0 ? store.orders[existingIdx].order_no : `FNK-${1000 + store.orders.length + 1}`;
+  const orderLines = data.lines
+    .filter((l) => l.qty > 0)
+    .map((l) => {
+      const item = store.items.find((i) => i.id === l.itemId);
+      if (!item) throw new Error(`Produce item ${l.itemId} not found.`);
+      return {
+        item_id: item.id,
+        name_en: item.name_en,
+        name_ta: item.name_ta,
+        unit: item.unit,
+        qty: l.qty,
+        price: item.price,
+      };
+    });
 
-  const orderRecord = {
-    id: existingIdx >= 0 ? store.orders[existingIdx].id : `66666666-000${store.orders.length + 1}-4111-8111-111111111111`,
-    order_no: orderNo,
-    cycle_id: cycle.id,
-    customer_id: customer.id,
-    branch_id: customer.branch_id,
-    delivery_mode: data.deliveryMode,
-    delivery_address: data.address,
-    status: "Placed",
-    coupon_code: data.couponCode || null,
-    discount_amount: Number(data.discountAmount || 0),
-    created_at: existingIdx >= 0 ? store.orders[existingIdx].created_at : new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    lines: orderLines,
-    note: data.note || "",
-  };
+  let orderNo = `ORD-${Date.now().toString().slice(-4)}`;
 
   if (existingIdx >= 0) {
-    store.orders[existingIdx] = orderRecord;
+    // Update in-place
+    orderNo = store.orders[existingIdx].order_no;
+    store.orders[existingIdx] = {
+      ...store.orders[existingIdx],
+      delivery_mode: data.deliveryMode || store.orders[existingIdx].delivery_mode,
+      delivery_address: data.address !== undefined ? data.address : store.orders[existingIdx].delivery_address,
+      note: data.note !== undefined ? data.note : store.orders[existingIdx].note,
+      lines: orderLines,
+      coupon_code: data.couponCode || null,
+      discount_amount: data.discountAmount || 0,
+      updated_at: new Date().toISOString(),
+    } as any;
   } else {
-    store.orders.unshift(orderRecord);
+    // New Order
+    const orderRecord = {
+      id: `ord-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      order_no: orderNo,
+      customer_id: customer.id,
+      cycle_id: cycle.id,
+      branch_id: branch.id,
+      delivery_mode: data.deliveryMode || customer.delivery_mode || "Door Delivery",
+      delivery_address: data.address || customer.address || "",
+      note: data.note || "",
+      status: "Placed",
+      admin_entered: false,
+      coupon_code: data.couponCode || null,
+      discount_amount: data.discountAmount || 0,
+      created_at: new Date().toISOString(),
+      lines: orderLines,
+    };
+    store.orders.unshift(orderRecord as any);
   }
 
   saveLocalStore(store);
@@ -343,11 +373,26 @@ export async function getCustomerOrderHistoryAction(rawPhone: string) {
   return store.orders
     .filter((o) => o.customer_id === customer.id)
     .map((o) => {
-      const isCurrentCycle = o.cycle_id === currentCycle?.id && o.status === "Placed";
+      const isPipeline = o.status === "Placed" && o.cycle_id === currentCycle?.id;
       let total = 0;
-      for (const l of o.lines || []) {
-        total += Number(l.qty) * Number(l.price);
-      }
+      const resolvedItems = (o.lines || []).map((l: any) => {
+        const masterItem = store.items.find((i) => i.id === l.item_id);
+        const price = isPipeline && masterItem ? masterItem.price : Number(l.price);
+        const lineTotal = Math.round(Number(l.qty) * price * 100) / 100;
+        total += lineTotal;
+        return {
+          id: l.item_id,
+          name_en: masterItem?.name_en || l.name_en,
+          name_ta: masterItem?.name_ta || l.name_ta,
+          qty: l.qty,
+          unit: masterItem?.unit || l.unit,
+          price,
+          lineTotal,
+        };
+      });
+
+      const discountAmount = Number((o as any).discount_amount || 0);
+      const finalTotal = Math.max(0, Math.round((total - discountAmount) * 100) / 100);
 
       return {
         id: o.id,
@@ -358,17 +403,11 @@ export async function getCustomerOrderHistoryAction(rawPhone: string) {
         delivery_address: o.delivery_address,
         note: o.note,
         created_at: o.created_at,
-        isCurrentCycle,
-        tentativeTotal: Math.round(total * 100) / 100,
-        order_items: (o.lines || []).map((l: any) => ({
-          id: l.item_id,
-          name_en: l.name_en,
-          name_ta: l.name_ta,
-          qty: l.qty,
-          unit: l.unit,
-          price: l.price,
-          lineTotal: Math.round(Number(l.qty) * Number(l.price) * 100) / 100,
-        })),
+        isCurrentCycle: isPipeline,
+        tentativeTotal: finalTotal,
+        coupon_code: (o as any).coupon_code || null,
+        discount_amount: discountAmount,
+        order_items: resolvedItems,
       };
     });
 }
