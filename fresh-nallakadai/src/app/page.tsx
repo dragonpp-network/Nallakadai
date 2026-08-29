@@ -965,10 +965,20 @@ export default function StorefrontPage() {
 
                             {lookup.branch.showPrices && (
                               <div className="mt-1.5 flex items-baseline gap-1.5 flex-wrap">
-                                <p className="text-base font-extrabold text-primary">
+                                <p className="text-base font-extrabold text-primary font-mono">
                                   ₹{item.price}{" "}
                                   <span className="text-xs font-normal text-muted-foreground">/ {item.unit}</span>
                                 </p>
+                                {item.sellingPrice && item.sellingPrice > item.price && (
+                                  <span className="text-xs text-muted-foreground line-through font-mono">
+                                    ₹{item.sellingPrice}
+                                  </span>
+                                )}
+                                {item.discountPercent > 0 && (
+                                  <Badge className="bg-emerald-600 text-white text-[9px] px-1.5 py-0 font-bold">
+                                    {item.discountPercent}% OFF
+                                  </Badge>
+                                )}
                               </div>
                             )}
                           </div>

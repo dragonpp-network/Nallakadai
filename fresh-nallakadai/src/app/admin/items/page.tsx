@@ -454,6 +454,41 @@ export default function AdminItemsPage() {
                             </div>
                           )}
 
+                          {/* Pricing & Customer Price Block */}
+                          <div className="bg-primary/5 border border-primary/20 p-2.5 rounded-xl flex items-center justify-between text-xs">
+                            <div>
+                              <span className="text-[10px] text-muted-foreground block">Customer Price</span>
+                              <div className="flex items-baseline gap-1.5">
+                                <span className="font-extrabold text-sm text-primary font-mono">
+                                  ₹{item.price}{" "}
+                                  <span className="text-[10px] font-normal text-muted-foreground">/ {item.unit}</span>
+                                </span>
+                                {item.selling_price && item.selling_price > item.price && (
+                                  <span className="text-[10px] text-muted-foreground line-through font-mono">
+                                    ₹{item.selling_price}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="text-right text-[11px] space-y-0.5">
+                              {item.procurement_cost !== undefined && (
+                                <div className="text-muted-foreground">
+                                  Cost: <strong className="text-foreground font-mono">₹{item.procurement_cost}</strong>
+                                </div>
+                              )}
+                              {item.discount_percent > 0 ? (
+                                <Badge className="bg-emerald-600 text-white text-[9px] px-1.5 py-0 font-bold">
+                                  {item.discount_percent}% OFF
+                                </Badge>
+                              ) : item.procurement_cost && item.price > item.procurement_cost ? (
+                                <span className="text-[10px] text-emerald-700 font-semibold">
+                                  Margin: {Math.round(((item.price - item.procurement_cost) / item.price) * 100)}%
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+
                           <div className="bg-muted/40 p-2 rounded-xl text-[11px] space-y-0.5 text-muted-foreground">
                             <div className="flex justify-between">
                               <span>Unit: <strong>{item.unit}</strong></span>
@@ -521,6 +556,41 @@ export default function AdminItemsPage() {
                 </div>
               )}
 
+              {/* Pricing & Customer Price Block */}
+              <div className="bg-primary/5 border border-primary/20 p-3 rounded-2xl flex items-center justify-between text-xs">
+                <div>
+                  <span className="text-[10px] text-muted-foreground block">Customer Price</span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="font-extrabold text-base text-primary font-mono">
+                      ₹{item.price}{" "}
+                      <span className="text-xs font-normal text-muted-foreground">/ {item.unit}</span>
+                    </span>
+                    {item.selling_price && item.selling_price > item.price && (
+                      <span className="text-xs text-muted-foreground line-through font-mono">
+                        ₹{item.selling_price}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="text-right text-xs space-y-0.5">
+                  {item.procurement_cost !== undefined && (
+                    <div className="text-muted-foreground text-[11px]">
+                      Cost: <strong className="text-foreground font-mono">₹{item.procurement_cost}</strong>
+                    </div>
+                  )}
+                  {item.discount_percent > 0 ? (
+                    <Badge className="bg-emerald-600 text-white text-[10px] px-2 py-0.5 font-bold">
+                      {item.discount_percent}% OFF
+                    </Badge>
+                  ) : item.procurement_cost && item.price > item.procurement_cost ? (
+                    <span className="text-[11px] text-emerald-700 font-semibold">
+                      Margin: {Math.round(((item.price - item.procurement_cost) / item.price) * 100)}%
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
               <div className="bg-muted/50 p-3 rounded-2xl text-xs space-y-1 text-muted-foreground">
                 <div className="flex justify-between">
                   <span>Unit: <strong className="text-foreground">{item.unit}</strong></span>
@@ -559,61 +629,72 @@ export default function AdminItemsPage() {
                 <th className="py-3 px-4">Product Name</th>
                 <th className="py-3 px-4">Category</th>
                 <th className="py-3 px-4">Brand Partner</th>
+                <th className="py-3 px-4">Buying Cost</th>
+                <th className="py-3 px-4">MRP / Base</th>
+                <th className="py-3 px-4">Discount</th>
+                <th className="py-3 px-4 font-bold text-primary">Customer Price</th>
                 <th className="py-3 px-4">Unit</th>
-                <th className="py-3 px-4">Presets</th>
-                <th className="py-3 px-4">Min / Max</th>
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
               {filtered.map((item) => (
-                <tr key={item.id} className="hover:bg-muted/20 transition">
-                  <td className="py-2.5 px-4">
+                <tr key={item.id} className="hover:bg-muted/30 transition">
+                  <td className="py-2 px-4">
                     <GenericProduceImage
                       src={item.image_url}
                       alt={item.name_en}
                       fallbackType="product"
-                      className="h-9 w-9 rounded-xl object-cover border shadow-sm"
+                      className="h-8 w-8 rounded-lg object-cover border shrink-0"
                     />
                   </td>
-                  <td className="py-2.5 px-4">
-                    <div className="font-bold text-foreground text-sm">{item.name_en}</div>
-                    <div className="text-xs text-muted-foreground font-tamil">{item.name_ta}</div>
+                  <td className="py-2 px-4">
+                    <div className="font-bold text-foreground">{item.name_en}</div>
+                    <div className="text-[11px] font-tamil text-muted-foreground">{item.name_ta || "—"}</div>
                   </td>
-                  <td className="py-2.5 px-4">
-                    <Badge
-                      style={{ backgroundColor: item.categories?.tint || "#EAF3DD", color: "#1c2a1c" }}
-                      className="text-[10px] font-semibold border"
-                    >
+                  <td className="py-2 px-4">
+                    <Badge variant="outline" className="text-[10px]">
                       {item.categories?.name || "General"}
                     </Badge>
                   </td>
-                  <td className="py-2.5 px-4">
-                    {item.brands ? (
-                      <span className="font-semibold text-amber-900 text-xs">{item.brands.name}</span>
+                  <td className="py-2 px-4 text-muted-foreground">
+                    {item.brands?.name || "Direct Farm"}
+                  </td>
+                  <td className="py-2 px-4 font-mono">
+                    ₹{item.procurement_cost !== undefined ? item.procurement_cost : "—"}
+                  </td>
+                  <td className="py-2 px-4 font-mono text-muted-foreground">
+                    ₹{item.selling_price || item.price}
+                  </td>
+                  <td className="py-2 px-4">
+                    {item.discount_percent > 0 ? (
+                      <Badge className="bg-emerald-600 text-white text-[9px] px-1 py-0 font-bold">
+                        {item.discount_percent}% OFF
+                      </Badge>
                     ) : (
-                      <span className="text-muted-foreground italic">Direct Farm</span>
+                      "—"
                     )}
                   </td>
-                  <td className="py-2.5 px-4 font-bold">{item.unit}</td>
-                  <td className="py-2.5 px-4 text-muted-foreground">{(item.presets || []).join(", ") || "—"}</td>
-                  <td className="py-2.5 px-4 text-muted-foreground">{item.min_qty} – {item.max_qty}</td>
-                  <td className="py-2.5 px-4">
+                  <td className="py-2 px-4 font-bold text-primary font-mono text-sm">
+                    ₹{item.price} / {item.unit}
+                  </td>
+                  <td className="py-2 px-4 text-muted-foreground">{item.unit}</td>
+                  <td className="py-2 px-4">
                     <span
                       className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                         item.active ? "bg-emerald-500/10 text-emerald-700" : "bg-rose-500/10 text-rose-700"
                       }`}
                     >
-                      {item.active ? "Active" : "Hidden"}
+                      {item.active ? "Active" : "Disabled"}
                     </span>
                   </td>
-                  <td className="py-2.5 px-4 text-right">
+                  <td className="py-2 px-4 text-right">
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={() => openEditModal(item)}
-                      className="rounded-xl text-xs gap-1 h-7 px-2.5"
+                      className="h-7 text-xs gap-1"
                     >
                       <Edit className="h-3 w-3" /> Edit
                     </Button>

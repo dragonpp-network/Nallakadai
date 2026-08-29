@@ -354,13 +354,30 @@ export async function getAdminOrdersAction(userId: string = DEFAULT_SUPER_ADMIN_
   return orders.map((o: any) => {
     const cust = store.customers.find((c) => c.id === o.customer_id);
     const branch = store.branches.find((b) => b.id === o.branch_id) || store.branches[0];
-
+    const isPipeline = o.status === "Placed";
     let tentativeTotal = 0;
-    for (const l of o.lines || []) {
-      if (!l.unavailable) {
-        tentativeTotal += Number(l.qty) * Number(l.price);
+    const resolvedLines = (o.lines || []).map((li: any) => {
+      const masterItem = store.items.find((i) => i.id === li.item_id);
+      const effectivePrice = isPipeline && masterItem ? masterItem.price : Number(li.price);
+      const lineTotal = Math.round(Number(li.qty) * effectivePrice * 100) / 100;
+      if (!li.unavailable) {
+        tentativeTotal += lineTotal;
       }
-    }
+      return {
+        id: li.item_id,
+        itemId: li.item_id,
+        nameEn: masterItem?.name_en || li.name_en,
+        nameTa: masterItem?.name_ta || li.name_ta,
+        unit: masterItem?.unit || li.unit,
+        qty: Number(li.qty),
+        price: effectivePrice,
+        unavailable: !!li.unavailable,
+        lineTotal,
+      };
+    });
+
+    const discountAmount = Number((o as any).discount_amount || 0);
+    const finalTentativeTotal = Math.max(0, Math.round((tentativeTotal - discountAmount) * 100) / 100);
 
     return {
       id: o.id,
@@ -387,19 +404,9 @@ export async function getAdminOrdersAction(userId: string = DEFAULT_SUPER_ADMIN_
             pickupAddress: branch.pickup_address,
           }
         : null,
-      tentativeTotal: Math.round(tentativeTotal * 100) / 100,
-      itemCount: (o.lines || []).length,
-      lines: (o.lines || []).map((li: any) => ({
-        id: li.item_id,
-        itemId: li.item_id,
-        nameEn: li.name_en,
-        nameTa: li.name_ta,
-        unit: li.unit,
-        qty: Number(li.qty),
-        price: Number(li.price),
-        unavailable: !!li.unavailable,
-        lineTotal: Math.round(Number(li.qty) * Number(li.price) * 100) / 100,
-      })),
+      tentativeTotal: finalTentativeTotal,
+      itemCount: resolvedLines.length,
+      lines: resolvedLines,
     };
   });
 }
@@ -485,9 +492,10 @@ export async function getFarmOrderAggregationAction(cycleId: string) {
       if (item.unavailable) continue; // Skip items marked unavailable
 
       const existing = aggregated.get(item.item_id);
-      const q = Number(item.qty);
-      const p = Number(item.price);
       const masterItem = store.items.find((i) => i.id === item.item_id);
+      const effectivePrice = masterItem ? masterItem.price : Number(item.price);
+      const q = Number(item.qty);
+      const p = effectivePrice;
       const cat = store.categories.find((c) => c.id === masterItem?.category_id);
       const brand = store.brands.find((b) => b.id === (masterItem as any)?.brand_id);
 
@@ -498,9 +506,9 @@ export async function getFarmOrderAggregationAction(cycleId: string) {
       } else {
         aggregated.set(item.item_id, {
           itemId: item.item_id,
-          nameEn: item.name_en,
-          nameTa: item.name_ta,
-          unit: item.unit,
+          nameEn: masterItem?.name_en || item.name_en,
+          nameTa: masterItem?.name_ta || item.name_ta,
+          unit: masterItem?.unit || item.unit,
           categoryId: cat?.id || "other",
           category: cat?.name || "Other Produce",
           categoryTa: cat?.name_ta || "",
@@ -581,13 +589,17 @@ export async function getOrderSheetsAction(cycleId: string) {
       preferredTime: cust?.preferred_delivery_time || "Morning",
       notes: o.note || "",
       createdAt: o.created_at,
-      lines: (o.lines || []).map((l: any) => ({
-        nameEn: l.name_en,
-        nameTa: l.name_ta,
-        qty: Number(l.qty),
-        unit: l.unit,
-        price: Number(l.price),
-      })),
+      lines: (o.lines || []).map((l: any) => {
+        const masterItem = store.items.find((i) => i.id === l.item_id);
+        const price = masterItem ? masterItem.price : Number(l.price);
+        return {
+          nameEn: masterItem?.name_en || l.name_en,
+          nameTa: masterItem?.name_ta || l.name_ta,
+          qty: Number(l.qty),
+          unit: masterItem?.unit || l.unit,
+          price,
+        };
+      }),
     };
   });
 }
@@ -678,8 +690,10 @@ export async function saveMasterItemAction(
   const discountPercent = Number(itemData.discountPercent || itemData.discount_percent || 0);
   const netPrice = Math.round((sellingPrice - (sellingPrice * discountPercent) / 100) * 100) / 100;
 
-  if (itemData.id) {
-    const idx = store.items.findIndex((i) => i.id === itemData.id);
+  let itemId = itemData.id;
+
+  if (itemId) {
+    const idx = store.items.findIndex((i) => i.id === itemId);
     if (idx >= 0) {
       store.items[idx] = {
         ...store.items[idx],
@@ -700,8 +714,9 @@ export async function saveMasterItemAction(
       };
     }
   } else {
+    itemId = `33333333-00${store.items.length + 1}-4111-8111-111111111111`;
     store.items.push({
-      id: `33333333-00${store.items.length + 1}-4111-8111-111111111111`,
+      id: itemId,
       name_en: itemData.nameEn,
       name_ta: itemData.nameTa,
       category_id: itemData.categoryId,
@@ -717,6 +732,30 @@ export async function saveMasterItemAction(
       price: netPrice,
       active: itemData.active,
     });
+  }
+
+  // Synchronize cycle_items pricing
+  for (const ci of store.cycle_items) {
+    if (ci.item_id === itemId) {
+      ci.price = netPrice;
+      ci.procurement_cost = procurementCost;
+      ci.selling_price = sellingPrice;
+      ci.discount_percent = discountPercent;
+    }
+  }
+
+  // 🔄 AUTOMATICALLY UPDATE ALL PIPELINE ORDERS (status: "Placed") WITH THE LATEST PRICE
+  for (const order of store.orders) {
+    if (order.status === "Placed") {
+      for (const line of order.lines || []) {
+        if (line.item_id === itemId) {
+          line.price = netPrice;
+          line.name_en = itemData.nameEn || line.name_en;
+          line.name_ta = itemData.nameTa || line.name_ta;
+          line.unit = itemData.unit || line.unit;
+        }
+      }
+    }
   }
 
   saveLocalStore(store);
