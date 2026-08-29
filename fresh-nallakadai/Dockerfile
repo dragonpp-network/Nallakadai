@@ -29,11 +29,15 @@ ENV HOSTNAME="0.0.0.0"
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# Ensure data directory exists and is writable by nextjs user
+RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
+
 COPY --from=builder /app/public ./public
 
 # Automatically leverage output traces to reduce image size
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/data ./data
 
 USER nextjs
 

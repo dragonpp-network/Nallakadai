@@ -2,15 +2,19 @@
 
 import React, { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import defaultAnimationData from "@/lib/lottie-animation.json";
 
-const LottiePlayer = dynamic(() => import("lottie-react"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex items-center justify-center p-4">
-      <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-    </div>
-  ),
-});
+const LottiePlayer = dynamic(
+  () => import("lottie-react").then((mod) => (mod.default || mod) as any),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center p-4">
+        <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </div>
+    ),
+  }
+);
 
 interface LottieAnimationProps {
   animationData?: any;
@@ -23,13 +27,13 @@ interface LottieAnimationProps {
 
 export function LottieAnimation({
   animationData,
-  src = "/lottie/shiksha-loading.json",
+  src,
   loop = true,
   autoplay = true,
   className = "w-40 h-40",
   style,
 }: LottieAnimationProps) {
-  const [data, setData] = useState<any>(animationData || null);
+  const [data, setData] = useState<any>(animationData || defaultAnimationData);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -38,7 +42,10 @@ export function LottieAnimation({
       fetch(src)
         .then((res) => res.json())
         .then((json) => setData(json))
-        .catch((err) => console.error("Failed to load Lottie JSON:", err));
+        .catch((err) => {
+          console.warn("Could not fetch external Lottie, using default:", err);
+          setData(defaultAnimationData);
+        });
     }
   }, [animationData, src]);
 
@@ -50,9 +57,17 @@ export function LottieAnimation({
     );
   }
 
-  return (
-    <div className={`flex items-center justify-center ${className}`} style={style}>
-      <LottiePlayer animationData={data} loop={loop} autoplay={autoplay} />
-    </div>
-  );
+  try {
+    return (
+      <div className={`flex items-center justify-center ${className}`} style={style}>
+        <LottiePlayer animationData={data} loop={loop} autoplay={autoplay} />
+      </div>
+    );
+  } catch (err) {
+    return (
+      <div className={`flex items-center justify-center ${className}`}>
+        <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 }
