@@ -1535,7 +1535,15 @@ export default function StorefrontPage() {
       </Dialog>
 
       {/* Order Confirmed / Updated Receipt Modal */}
-      <Dialog open={confirmationModalOpen} onOpenChange={setConfirmationModalOpen}>
+      <Dialog
+        open={confirmationModalOpen}
+        onOpenChange={(open) => {
+          setConfirmationModalOpen(open);
+          if (!open) {
+            setActiveTab("home");
+          }
+        }}
+      >
         <DialogContent className="rounded-3xl max-w-sm text-center">
           <LottieAnimation className="w-36 h-36 mx-auto" />
 
