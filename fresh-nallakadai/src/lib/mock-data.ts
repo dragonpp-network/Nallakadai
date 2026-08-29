@@ -1,0 +1,179 @@
+// Full rich fallback dataset for local testing when Supabase RLS is active
+
+export const INITIAL_BRANCHES = [
+  {
+    id: "11111111-1111-4111-8111-111111111111",
+    name: "Erode",
+    address: "Nalla Kadai Organic, Perundurai Road, Erode",
+    whatsapp_number: "919489581122",
+    support_number: "919489581122",
+    pickup_address: "Nalla Kadai Organic, Perundurai Road, Erode (Opp. Reliance Mall)",
+    collection_timing: "Tuesday 8:00 AM – 12:00 PM",
+    show_prices: true,
+    next_opening_note: "Our Fresh store opens every Friday evening for Tuesday delivery.",
+    active: true,
+  },
+  {
+    id: "11111111-2222-4111-8111-111111111111",
+    name: "Coimbatore",
+    address: "Nalla Kadai, RS Puram, Coimbatore",
+    whatsapp_number: "919489581133",
+    support_number: "919489581133",
+    pickup_address: "Nalla Kadai, DB Road, RS Puram, Coimbatore",
+    collection_timing: "Wednesday 8:00 AM – 1:00 PM",
+    show_prices: true,
+    next_opening_note: "Coimbatore cycle opens Saturday 10:00 AM.",
+    active: true,
+  },
+  {
+    id: "11111111-3333-4111-8111-111111111111",
+    name: "Tiruppur",
+    address: "Nalla Kadai, Avinashi Road, Tiruppur",
+    whatsapp_number: "919489581144",
+    support_number: "919489581144",
+    pickup_address: "Nalla Kadai, Kumaran Road, Tiruppur",
+    collection_timing: "Friday 8:00 AM – 12:00 PM",
+    show_prices: true,
+    next_opening_note: "Tiruppur cycle opens Tuesday 9:00 AM.",
+    active: true,
+  },
+];
+
+export const INITIAL_BRANDS = [
+  {
+    id: "b0000000-0001-4111-8111-111111111111",
+    name: "Nalla Kadai Farm Direct",
+    name_ta: "நல்ல கடை நேரடி பண்ணை",
+    logo_url: "/images/logo.jpg",
+    description: "Certified natural produce harvested directly from partner organic farmers in Erode district.",
+    category_ids: ["22222222-0001-4111-8111-111111111111", "22222222-0002-4111-8111-111111111111"],
+    active: true,
+  },
+  {
+    id: "b0000000-0002-4111-8111-111111111111",
+    name: "Nammalvar Naturals",
+    name_ta: "நம்மாழ்வார் இயற்கை பண்ணை",
+    logo_url: null,
+    description: "Native heirloom vegetables and greens cultivated using traditional Subhash Palekar ZBNF methods.",
+    category_ids: ["22222222-0001-4111-8111-111111111111", "22222222-0002-4111-8111-111111111111", "22222222-0003-4111-8111-111111111111"],
+    active: true,
+  },
+  {
+    id: "b0000000-0003-4111-8111-111111111111",
+    name: "Arogya A2 Dairy",
+    name_ta: "ஆரோக்கியா நாட்டுப் பசு பால்",
+    logo_url: null,
+    description: "Pure grass-fed Kangayam and Hallikar native cow milk, curd and traditional hand-churned butter.",
+    category_ids: ["22222222-0004-4111-8111-111111111111"],
+    active: true,
+  },
+  {
+    id: "b0000000-0004-4111-8111-111111111111",
+    name: "Chettinad Vaagai Oils",
+    name_ta: "செட்டிநாடு வாகை மரச்செக்கு",
+    logo_url: null,
+    description: "Wood cold-pressed oils made using pure Vaagai wooden churns without heat treatment.",
+    category_ids: ["22222222-0005-4111-8111-111111111111"],
+    active: true,
+  },
+];
+
+export const INITIAL_CATEGORIES = [
+  { id: "22222222-0001-4111-8111-111111111111", name: "Vegetables", name_ta: "காய்கறிகள்", tint: "#EAF3DD", sort_order: 1, image_url: null, active: true },
+  { id: "22222222-0002-4111-8111-111111111111", name: "Greens", name_ta: "கீரைகள்", tint: "#DCEBD3", sort_order: 2, image_url: null, active: true },
+  { id: "22222222-0003-4111-8111-111111111111", name: "Fruits", name_ta: "பழங்கள்", tint: "#FBE9D8", sort_order: 3, image_url: null, active: true },
+  { id: "22222222-0004-4111-8111-111111111111", name: "Dairy", name_ta: "பால் பொருட்கள்", tint: "#EFF3FA", sort_order: 4, image_url: null, active: true },
+  { id: "22222222-0005-4111-8111-111111111111", name: "Vegan", name_ta: "வீகன்", tint: "#F1EEDD", sort_order: 5, image_url: null, active: true },
+];
+
+export const INITIAL_ITEMS = [
+  { id: "33333333-0001-4111-8111-111111111111", name_en: "Country Tomato", name_ta: "நாட்டுத் தக்காளி", category_id: "22222222-0001-4111-8111-111111111111", brand_id: "b0000000-0001-4111-8111-111111111111", unit: "Kg", presets: [0.5, 1, 2], min_qty: 0.25, max_qty: 10, price: 40, image_url: null, active: true },
+  { id: "33333333-0002-4111-8111-111111111111", name_en: "Ladies Finger (Okra)", name_ta: "வெண்டைக்காய்", category_id: "22222222-0001-4111-8111-111111111111", brand_id: "b0000000-0001-4111-8111-111111111111", unit: "Kg", presets: [0.25, 0.5, 1], min_qty: 0.25, max_qty: 5, price: 60, image_url: null, active: true },
+  { id: "33333333-0003-4111-8111-111111111111", name_en: "Country Drumstick", name_ta: "நாட்டு முருங்கைக்காய்", category_id: "22222222-0001-4111-8111-111111111111", brand_id: "b0000000-0002-4111-8111-111111111111", unit: "Nos", presets: [2, 5, 10], min_qty: 1, max_qty: 25, price: 12, image_url: null, active: true },
+  { id: "33333333-0004-4111-8111-111111111111", name_en: "Korai Kizhangu", name_ta: "கோரைக்கிழங்கு", category_id: "22222222-0001-4111-8111-111111111111", brand_id: "b0000000-0002-4111-8111-111111111111", unit: "Kg", presets: [0.25, 0.5, 1], min_qty: 0.25, max_qty: 3, price: 120, image_url: null, active: true },
+  { id: "33333333-0005-4111-8111-111111111111", name_en: "Small Onion (Shallots)", name_ta: "சின்ன வெங்காயம்", category_id: "22222222-0001-4111-8111-111111111111", brand_id: "b0000000-0001-4111-8111-111111111111", unit: "Kg", presets: [0.5, 1, 2], min_qty: 0.25, max_qty: 5, price: 85, image_url: null, active: true },
+  { id: "33333333-0006-4111-8111-111111111111", name_en: "Green Chilli", name_ta: "பச்சை மிளகாய்", category_id: "22222222-0001-4111-8111-111111111111", brand_id: "b0000000-0001-4111-8111-111111111111", unit: "Kg", presets: [0.1, 0.25, 0.5], min_qty: 0.1, max_qty: 2, price: 60, image_url: null, active: true },
+  { id: "33333333-0007-4111-8111-111111111111", name_en: "Brinjal (Eggplant)", name_ta: "கத்திரிக்காய்", category_id: "22222222-0001-4111-8111-111111111111", brand_id: "b0000000-0002-4111-8111-111111111111", unit: "Kg", presets: [0.5, 1, 2], min_qty: 0.25, max_qty: 5, price: 45, image_url: null, active: true },
+  { id: "33333333-0008-4111-8111-111111111111", name_en: "Spinach (Pasalai)", name_ta: "பசலைக்கீரை", category_id: "22222222-0002-4111-8111-111111111111", brand_id: "b0000000-0001-4111-8111-111111111111", unit: "Nos", presets: [1, 2, 3], min_qty: 1, max_qty: 10, price: 20, image_url: null, active: true },
+  { id: "33333333-0009-4111-8111-111111111111", name_en: "Moringa Leaves", name_ta: "முருங்கைக்கீரை", category_id: "22222222-0002-4111-8111-111111111111", brand_id: "b0000000-0001-4111-8111-111111111111", unit: "Nos", presets: [1, 2], min_qty: 1, max_qty: 10, price: 20, image_url: null, active: true },
+  { id: "33333333-0010-4111-8111-111111111111", name_en: "Sirukeerai", name_ta: "சிறுகீரை", category_id: "22222222-0002-4111-8111-111111111111", brand_id: "b0000000-0001-4111-8111-111111111111", unit: "Nos", presets: [1, 2, 3], min_qty: 1, max_qty: 10, price: 20, image_url: null, active: true },
+  { id: "33333333-0011-4111-8111-111111111111", name_en: "Arai Keerai", name_ta: "அரைக்கீரை", category_id: "22222222-0002-4111-8111-111111111111", brand_id: "b0000000-0001-4111-8111-111111111111", unit: "Nos", presets: [1, 2], min_qty: 1, max_qty: 10, price: 20, image_url: null, active: true },
+  { id: "33333333-0012-4111-8111-111111111111", name_en: "Banana (Poovan)", name_ta: "பூவன் பழம்", category_id: "22222222-0003-4111-8111-111111111111", brand_id: "b0000000-0002-4111-8111-111111111111", unit: "Kg", presets: [0.5, 1, 2], min_qty: 0.5, max_qty: 5, price: 70, image_url: null, active: true },
+  { id: "33333333-0013-4111-8111-111111111111", name_en: "Country Guava", name_ta: "நாட்டு கொய்யா", category_id: "22222222-0003-4111-8111-111111111111", brand_id: "b0000000-0002-4111-8111-111111111111", unit: "Kg", presets: [0.5, 1], min_qty: 0.5, max_qty: 5, price: 90, image_url: null, active: true },
+  { id: "33333333-0014-4111-8111-111111111111", name_en: "Papaya", name_ta: "பப்பாளி", category_id: "22222222-0003-4111-8111-111111111111", brand_id: "b0000000-0002-4111-8111-111111111111", unit: "Kg", presets: [1, 2], min_qty: 0.5, max_qty: 5, price: 50, image_url: null, active: true },
+  { id: "33333333-0015-4111-8111-111111111111", name_en: "Fresh A2 Cow Milk", name_ta: "நாட்டுப் பசு பால்", category_id: "22222222-0004-4111-8111-111111111111", brand_id: "b0000000-0003-4111-8111-111111111111", unit: "Litre", presets: [0.5, 1, 2], min_qty: 0.5, max_qty: 5, price: 65, image_url: null, active: true },
+  { id: "33333333-0016-4111-8111-111111111111", name_en: "Farm Fresh Curd", name_ta: "பண்ணைத் தயிர்", category_id: "22222222-0004-4111-8111-111111111111", brand_id: "b0000000-0003-4111-8111-111111111111", unit: "Gram", presets: [250, 500], min_qty: 200, max_qty: 2000, price: 0.09, image_url: null, active: true },
+  { id: "33333333-0017-4111-8111-111111111111", name_en: "Country Butter (Venna)", name_ta: "வெண்ணெய்", category_id: "22222222-0004-4111-8111-111111111111", brand_id: "b0000000-0003-4111-8111-111111111111", unit: "Gram", presets: [250, 500], min_qty: 100, max_qty: 2000, price: 0.70, image_url: null, active: true },
+  { id: "33333333-0018-4111-8111-111111111111", name_en: "Cold Pressed Groundnut Oil", name_ta: "மரச்செக்கு நிலக்கடலை எண்ணெய்", category_id: "22222222-0005-4111-8111-111111111111", brand_id: "b0000000-0004-4111-8111-111111111111", unit: "Litre", presets: [0.5, 1], min_qty: 0.5, max_qty: 5, price: 320, image_url: null, active: true },
+  { id: "33333333-0019-4111-8111-111111111111", name_en: "Cold Pressed Sesame Oil", name_ta: "மரச்செக்கு நல்லெண்ணெய்", category_id: "22222222-0005-4111-8111-111111111111", brand_id: "b0000000-0004-4111-8111-111111111111", unit: "Litre", presets: [0.5, 1], min_qty: 0.5, max_qty: 5, price: 440, image_url: null, active: true },
+];
+
+export const INITIAL_CUSTOMERS = [
+  { id: "55555555-0001-4111-8111-111111111111", name: "Sampath Kumar", mobile: "9489581122", alt_mobile: "9842711000", branch_id: "11111111-1111-4111-8111-111111111111", delivery_mode: "Door Delivery", address: "12, Kamarajar Street, Erode", area: "Perundurai Road", active: true },
+  { id: "55555555-0002-4111-8111-111111111111", name: "Lakshmi Devi", mobile: "9600012345", alt_mobile: null, branch_id: "11111111-1111-4111-8111-111111111111", delivery_mode: "Customer Pickup", address: "", area: "Surampatti", active: true },
+  { id: "55555555-0003-4111-8111-111111111111", name: "Ramasamy Natarajan", mobile: "9842711223", alt_mobile: null, branch_id: "11111111-1111-4111-8111-111111111111", delivery_mode: "Door Delivery", address: "45 Gandhi Nagar, Erode", area: "Thindal", active: true },
+  { id: "55555555-0004-4111-8111-111111111111", name: "Kavitha Senthil", mobile: "9443355667", alt_mobile: "9443355668", branch_id: "11111111-1111-4111-8111-111111111111", delivery_mode: "Door Delivery", address: "8A, VOC Nagar, Erode", area: "Brough Road", active: true },
+  { id: "55555555-0005-4111-8111-111111111111", name: "Dr. Anand Raman", mobile: "9894011234", alt_mobile: null, branch_id: "11111111-1111-4111-8111-111111111111", delivery_mode: "Door Delivery", address: "102 Doctors Colony, Erode", area: "Collectorate", active: true },
+  { id: "55555555-0006-4111-8111-111111111111", name: "Meena Murugan", mobile: "9789012345", alt_mobile: null, branch_id: "11111111-1111-4111-8111-111111111111", delivery_mode: "Customer Pickup", address: "", area: "Solar", active: true },
+];
+
+export const INITIAL_CYCLE = {
+  id: "44444444-0001-4111-8111-111111111111",
+  branch_id: "11111111-1111-4111-8111-111111111111",
+  cycle_no: 1,
+  open_at: new Date(Date.now() - 86400000).toISOString(),
+  close_at: new Date(Date.now() + 5 * 86400000).toISOString(),
+  delivery_date: new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0],
+  status: "Open",
+  manual_override: null,
+};
+
+export const INITIAL_ORDERS = [
+  {
+    id: "66666666-0001-4111-8111-111111111111",
+    order_no: "FNK-1001",
+    cycle_id: "44444444-0001-4111-8111-111111111111",
+    customer_id: "55555555-0001-4111-8111-111111111111",
+    branch_id: "11111111-1111-4111-8111-111111111111",
+    delivery_mode: "Door Delivery",
+    delivery_address: "12, Kamarajar Street, Erode",
+    status: "Placed",
+    created_at: new Date(Date.now() - 3600000 * 5).toISOString(),
+    lines: [
+      { item_id: "33333333-0001-4111-8111-111111111111", name_en: "Country Tomato", name_ta: "நாட்டுத் தக்காளி", unit: "Kg", qty: 2, price: 40 },
+      { item_id: "33333333-0002-4111-8111-111111111111", name_en: "Ladies Finger (Okra)", name_ta: "வெண்டைக்காய்", unit: "Kg", qty: 1, price: 60 },
+      { item_id: "33333333-0008-4111-8111-111111111111", name_en: "Spinach (Pasalai)", name_ta: "பசலைக்கீரை", unit: "Nos", qty: 2, price: 20 },
+      { item_id: "33333333-0015-4111-8111-111111111111", name_en: "Fresh A2 Cow Milk", name_ta: "நாட்டுப் பசு பால்", unit: "Litre", qty: 2, price: 65 },
+    ],
+  },
+  {
+    id: "66666666-0002-4111-8111-111111111111",
+    order_no: "FNK-1002",
+    cycle_id: "44444444-0001-4111-8111-111111111111",
+    customer_id: "55555555-0002-4111-8111-111111111111",
+    branch_id: "11111111-1111-4111-8111-111111111111",
+    delivery_mode: "Customer Pickup",
+    delivery_address: "",
+    status: "Placed",
+    created_at: new Date(Date.now() - 3600000 * 3).toISOString(),
+    lines: [
+      { item_id: "33333333-0003-4111-8111-111111111111", name_en: "Country Drumstick", name_ta: "நாட்டு முருங்கைக்காய்", unit: "Nos", qty: 5, price: 12 },
+      { item_id: "33333333-0012-4111-8111-111111111111", name_en: "Banana (Poovan)", name_ta: "பூவன் பழம்", unit: "Kg", qty: 1.5, price: 70 },
+    ],
+  },
+  {
+    id: "66666666-0003-4111-8111-111111111111",
+    order_no: "FNK-1003",
+    cycle_id: "44444444-0001-4111-8111-111111111111",
+    customer_id: "55555555-0003-4111-8111-111111111111",
+    branch_id: "11111111-1111-4111-8111-111111111111",
+    delivery_mode: "Door Delivery",
+    delivery_address: "45 Gandhi Nagar, Erode",
+    status: "Placed",
+    created_at: new Date(Date.now() - 3600000 * 1).toISOString(),
+    lines: [
+      { item_id: "33333333-0001-4111-8111-111111111111", name_en: "Country Tomato", name_ta: "நாட்டுத் தக்காளி", unit: "Kg", qty: 1, price: 40 },
+      { item_id: "33333333-0018-4111-8111-111111111111", name_en: "Cold Pressed Groundnut Oil", name_ta: "மரச்செக்கு நிலக்கடலை எண்ணெய்", unit: "Litre", qty: 1, price: 320 },
+    ],
+  },
+];

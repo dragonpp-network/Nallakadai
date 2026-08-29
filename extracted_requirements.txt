@@ -1,0 +1,763 @@
+Fresh Nalla Kadai — Online Vegetable Ordering System
+
+Software Requirements Document
+
+Client
+
+Nalla Kadai Organic, Erode
+
+Application
+
+fresh.nallakadai.in
+
+Document version
+
+2.0 (Final for vendor quotation)
+
+Date
+
+10 August 2026
+
+Prepared by
+
+Sampath
+
+Client contact
+
+9489581122
+
+Vendor
+
+[Development company name]
+
+1. Purpose of this document
+
+This document defines the functional and non-functional requirements for a web-based ordering system that allows pre-approved customers of Nalla Kadai to order fresh organic vegetables, greens, fruits and dairy on a recurring cycle.
+
+The vendor is expected to review this document, raise clarifications against the numbered requirements, and return a written proposal covering scope, timeline and technology stack before development begins.
+
+The application is to be delivered complete, in a single release. It is not to be split into phases or a reduced first version.
+
+2. Business background
+
+Nalla Kadai Organic operates physical organic stores and an e-commerce site at nallakadai.in. Fresh produce cannot be sold through the existing e-commerce platform because it is sourced against confirmed demand: orders are collected from customers first, aggregated, sent to partner farms, harvested and then delivered.
+
+A typical cycle: orders are collected Saturday and Sunday, the aggregated requirement is sent to the farm, harvesting happens Monday, produce reaches the branch Tuesday morning, and it is then separated, weighed against each customer's order and dispatched. Some branches will run a second cycle with Friday delivery.
+
+This creates an ordering pattern the current website cannot support:
+
+Ordering is open only during defined windows ("cycles"), not continuously.
+
+Item availability changes every cycle depending on what the farms can harvest.
+
+Prices are provisional at order time and finalised only after weighing.
+
+Access is restricted to customers we have personally onboarded and confirmed by phone.
+
+This application handles that specific workflow. It is a standalone system and does not connect to nallakadai.in, to Shopify, or to any payment gateway.
+
+3. Glossary
+
+Term
+
+Definition
+
+Branch
+
+A Nalla Kadai outlet serving a defined delivery area. Each branch runs its own cycles, customer list and contact numbers.
+
+Cycle
+
+One complete ordering round for one branch: order window opens → closes → farm order placed → harvest → delivery. Identified by branch + cycle number.
+
+Master Item List
+
+The permanent catalogue of every product that can ever be offered, with name, category, unit and order limits.
+
+Cycle Availability List
+
+The subset of master items actually offered in a given cycle, with that cycle's price and optional quantity cap.
+
+Store Open / Closed
+
+Whether the order window for a branch's current cycle is accepting customer orders.
+
+Order Sheet
+
+The printed picking document for a single customer's order, used by the packing team.
+
+Non-collection
+
+An order that the customer did not collect, or refused to accept on delivery.
+
+4. Scope
+
+4.1 In scope
+
+Customer onboarding by admin, following a WhatsApp enquiry
+
+Phone-number-based customer access to the ordering interface
+
+Cycle and availability management per branch
+
+Master item management with Tamil and English names and per-item order limits
+
+Mobile-first ordering interface with cart and order review
+
+Repeat-last-order function
+
+Live admin dashboard for order monitoring, editing and sales follow-up
+
+Aggregated farm procurement list with PDF and Excel export
+
+Printable per-customer order sheets for the picking team
+
+Non-collection tracking
+
+Reporting across branches, customers, items and cycles
+
+Role-based access for branch and super admin
+
+4.2 Out of scope
+
+The following have been considered and deliberately excluded. Vendors should not quote for them.
+
+OTP verification of customers
+
+SMS or WhatsApp Business API messaging from the application
+
+Automated order confirmations or notifications to customers
+
+Online payment gateway
+
+Billing, invoicing, payment status or amount collection — all billing is handled in our existing ERP
+
+Integration with nallakadai.in, Shopify, the ERP, or any accounting system
+
+Native mobile applications for iOS or Android
+
+Delivery charge or minimum order value logic — handled offline
+
+System-enforced rules for short supply — the admin decides manually while picking
+
+Logistics or delivery-partner integration
+
+Items in this list may be considered as future enhancements. The system should be built so they can be added later without redesign, but they are not to be built now.
+
+5. User roles and permissions
+
+Capability
+
+Customer
+
+Branch Admin
+
+Super Admin
+
+Place and review own order
+
+✔
+
+Repeat last order
+
+✔
+
+View own order history
+
+✔
+
+Add / edit customers
+
+✔ (own branch)
+
+✔ (all)
+
+Open / close store cycle
+
+✔ (own branch)
+
+✔ (all)
+
+Set cycle availability and prices
+
+✔ (own branch)
+
+✔ (all)
+
+View and edit customer orders
+
+✔ (own branch)
+
+✔ (all)
+
+Print order sheets and export farm order
+
+✔ (own branch)
+
+✔ (all)
+
+Mark non-collection
+
+✔ (own branch)
+
+✔ (all)
+
+Manage master item list
+
+✔
+
+Create branches and admin users
+
+✔
+
+View cross-branch reports
+
+✔
+
+View audit log
+
+✔
+
+6. Functional requirements
+
+6.1 Customer onboarding
+
+ID
+
+Requirement
+
+FR-1.1
+
+Each branch shall have its own QR code, its own WhatsApp enquiry number and its own customer support number. These numbers differ from branch to branch and shall be configurable per branch, not hard-coded.
+
+FR-1.2
+
+Scanning a branch's QR code shall open WhatsApp addressed to that branch's enquiry number, with a pre-filled message prompting the customer to supply the details we need: name, mobile number, delivery preference (door delivery or pickup) and delivery location.
+
+FR-1.3
+
+Customers cannot self-register. Only an admin may create a customer record, after calling the customer and confirming their details.
+
+FR-1.4
+
+The admin shall register the customer with: full name, mobile number (unique, primary key), branch (dropdown), default delivery mode (Door Delivery / Customer Pickup), delivery address, area or landmark, and optional alternate mobile.
+
+FR-1.5
+
+Mobile number shall be unique across the system. If a number already exists, the system shall show the existing record rather than creating a duplicate.
+
+FR-1.6
+
+The system shall support bulk import of existing customers via CSV upload, with validation and an error report for rejected rows.
+
+FR-1.7
+
+Admin shall be able to deactivate a customer without deleting their order history.
+
+6.2 Customer access
+
+ID
+
+Requirement
+
+FR-2.1
+
+The customer shall access the store by entering their registered mobile number. No password, no OTP, no verification message.
+
+FR-2.2
+
+If the number entered is not registered, the system shall display a friendly message with a WhatsApp button to request access — not a technical error. The WhatsApp number used shall be resolved by branch where possible, otherwise a default enquiry number.
+
+FR-2.3
+
+If the number is registered but the store is closed, the system shall display: "Our Fresh store will open soon. For any queries please call [branch support number]." The number shown shall be that of the customer's own branch. The next expected opening date shall be shown if configured.
+
+FR-2.4
+
+On successful entry the system shall greet the customer by name and show their branch and the expected delivery date for the current cycle.
+
+6.3 Branch and cycle management
+
+ID
+
+Requirement
+
+FR-3.1
+
+Super Admin shall create and manage branches: branch name, address, WhatsApp enquiry number, customer support number, pickup point address and collection timing.
+
+FR-3.2
+
+Each cycle shall be a record containing: branch, cycle number, order window open date-time, order window close date-time, expected delivery date, and status (Draft / Open / Closed / Delivered).
+
+FR-3.3
+
+The admin shall enter the close date and time when opening the cycle. The store shall then close automatically at that moment. Admin shall also be able to open or close manually at any time, overriding the schedule.
+
+FR-3.4
+
+Cycle schedules shall be configurable per branch. Some branches run one cycle per week; others may run two, for example a Saturday–Sunday window with Tuesday delivery plus a second window with Friday delivery.
+
+FR-3.5
+
+Admin shall be able to place an order on a customer's behalf even when the store is closed, for phone-in requests. Such orders shall be flagged as admin-entered in the record.
+
+FR-3.6
+
+Closing a cycle shall not delete data. Closed cycles remain fully viewable and reportable.
+
+FR-3.7
+
+When opening a new cycle, the system shall display an alert listing customers of that branch with outstanding non-collection flags from previous cycles (see FR-9.5), so staff can decide whether to allow them to order.
+
+6.4 Master item list
+
+ID
+
+Requirement
+
+FR-4.1
+
+Super Admin shall maintain a master item list with: item name in English, item name in Tamil, category, unit of measurement, default quantity options, minimum order quantity, maximum order quantity, image (optional), and active/inactive flag.
+
+FR-4.2
+
+Categories shall be: Vegetables, Greens, Fruits, Dairy, Vegan. The category list shall be editable, not hard-coded.
+
+FR-4.3
+
+Units of measurement shall be: Kg, Gram, Nos, Litre, Ml. The unit is fixed by the item and cannot be changed by the customer.
+
+FR-4.4
+
+Each item shall carry preset quantity buttons for one-tap selection (for example Tomato: 1 kg, 2 kg, 5 kg) plus a free-entry field for any other quantity.
+
+FR-4.5
+
+Minimum and maximum order quantity shall be enforced on the free-entry field. If a customer enters a quantity outside the permitted range, the system shall reject it and display a clear message stating the unit and the allowed range — for example: "Tomato is sold in kg. Please enter between 0.25 and 10 kg."
+
+FR-4.6
+
+The purpose of FR-4.5 is to prevent unit-confusion errors. Customers intending to order half a kilo frequently type 500, thinking in grams, against an item priced in kg — producing an order for 500 kg. This validation is a critical requirement, not a nice-to-have.
+
+FR-4.7
+
+The free-entry field shall accept decimals where the unit allows (for example 0.25 kg).
+
+FR-4.8
+
+The unit shall be displayed prominently beside the entry field at the point of entry, not only in the item name.
+
+FR-4.9
+
+Item names shall support Tamil Unicode throughout — entry, storage, display, search, and all exports and printouts. Example values for testing: கோரைகிழங்கு, வெண்டைக்காய், முருங்கைக்காய்.
+
+6.5 Cycle availability setup
+
+ID
+
+Requirement
+
+FR-5.1
+
+Before opening a cycle, admin shall build that cycle's availability list by selecting items from the master list via a searchable multi-select interface.
+
+FR-5.2
+
+Price shall be set per item per cycle, not on the master item record. Fresh produce prices change every cycle and past orders must retain the price that applied at the time.
+
+FR-5.3
+
+Admin shall be able to copy the previous cycle's availability list as a starting point and then edit it, to save setup time.
+
+FR-5.4
+
+Admin shall optionally set a maximum available quantity per item per cycle. Once the cap is reached the item shall show as sold out and stop accepting orders.
+
+FR-5.5
+
+Admin shall be able to add or remove items from an open cycle. Removing an item that customers have already ordered shall raise a warning listing the affected orders.
+
+FR-5.6
+
+Minimum and maximum order quantities shall default from the master item but shall be overridable for a specific cycle where supply is unusually tight or plentiful.
+
+FR-5.7
+
+A setting Show Prices (On/Off) shall control whether prices are visible to customers, configurable per branch.
+
+6.6 Customer ordering interface
+
+ID
+
+Requirement
+
+FR-6.1
+
+All available items shall be presented on a single scrolling page, grouped by category. No pagination, no category drill-down.
+
+FR-6.2
+
+Each category shall have a distinct background tint so customers can tell sections apart while scrolling quickly.
+
+FR-6.3
+
+Customers select only what they want. Unwanted items are simply scrolled past — no explicit skip or deselect action.
+
+FR-6.4
+
+When Show Prices is on, each item shall display its rate per unit, and the running cart total shall update as items are selected.
+
+FR-6.5
+
+When Show Prices is on, the cart and confirmation screens shall carry this notice: "This is a tentative amount. The final bill may vary slightly based on actual weight, farm pricing and transport charges."
+
+FR-6.6
+
+Delivery mode selection (Door Delivery / Customer Pickup) shall appear at the end of the item list, pre-filled with the customer's default and changeable for this order only.
+
+FR-6.7
+
+For Door Delivery the saved address shall be shown with an option to edit it for this order. For Customer Pickup the branch pickup address and collection timing shall be displayed.
+
+FR-6.8
+
+View Cart shall show all selected items with quantities, unit, and price where enabled, allowing edit or removal of any line before submission.
+
+FR-6.9
+
+An optional free-text note field shall be available for special instructions.
+
+FR-6.10
+
+On submission the customer shall see a confirmation screen showing their order number, order summary and expected delivery date. This screen is the customer's only confirmation — no message is sent.
+
+FR-6.11
+
+The customer shall be able to view and edit their submitted order at any time until the order window closes. After close the order is locked and the screen shall display the branch support number to call.
+
+6.7 Repeat last order
+
+ID
+
+Requirement
+
+FR-7.1
+
+Returning customers shall see a "Same as last order" button that pre-fills the cart from their most recent order.
+
+FR-7.2
+
+Items from the last order that are unavailable this cycle shall be clearly marked as unavailable and excluded from the cart, with a visible list of what was dropped.
+
+FR-7.3
+
+Quantities carried over from the last order shall be re-validated against current minimum and maximum limits.
+
+FR-7.4
+
+The pre-filled cart shall be fully editable before submission.
+
+6.8 Admin order monitoring and sales follow-up
+
+ID
+
+Requirement
+
+FR-8.1
+
+Admin shall be able to check the live status of the current cycle at any point while it is open, without waiting for it to close.
+
+FR-8.2
+
+The dashboard shall show, for the current cycle: number of customers who have ordered, total orders, total quantity, total tentative value, and number of registered customers who have not yet ordered.
+
+FR-8.3
+
+The system shall produce a "Not Yet Ordered" list for the current cycle — active customers of that branch with no order, showing name and phone number, with a one-tap call button on mobile and export to Excel. This list is used to drive sales follow-up calls while the window is still open.
+
+FR-8.4
+
+Admin shall view a list of all orders in the cycle with order number, customer name, phone, delivery mode, item count, tentative value and submission time, with search and filter.
+
+FR-8.5
+
+Admin shall open any individual order and edit quantities, add items, remove items or change delivery mode.
+
+FR-8.6
+
+Admin edits shall be subject to the same minimum and maximum validation as customer entry, with the ability to override where genuinely required.
+
+FR-8.7
+
+Every admin edit shall be recorded in an audit log capturing user, timestamp, and before/after values.
+
+FR-8.8
+
+Admin shall be able to cancel an order with a reason.
+
+FR-8.9
+
+Admin shall be able to view the cumulative item-wise total received so far at any time during the open window, not only after closing.
+
+6.9 Procurement, picking and dispatch
+
+ID
+
+Requirement
+
+FR-9.1
+
+The system shall generate a cumulative farm order for a cycle: every item with total quantity aggregated across all customer orders, grouped by category.
+
+FR-9.2
+
+The farm order shall be exportable as PDF and Excel. Both exports must render Tamil item names correctly.
+
+FR-9.3
+
+The system shall generate a printable Order Sheet per customer for the picking team, containing: order number, customer name, mobile number, branch, date ordered, delivery mode, delivery address (for door delivery), item names with quantity and unit, and the customer's notes.
+
+FR-9.4
+
+Order Sheets shall be printable individually and as a batch for the whole cycle, formatted to print cleanly on A4 or A5. Tamil item names must render correctly on the printout.
+
+FR-9.5
+
+After delivery, admin shall be able to tick a Non-collection flag against an order where the customer did not collect it or refused to accept it on delivery, with an optional reason note.
+
+FR-9.6
+
+Non-collection flags shall be visible on the customer's record and shall surface as an alert when the next cycle is opened (FR-3.7).
+
+FR-9.7
+
+The system shall count non-collections per customer over time so that repeat defaulters can be identified.
+
+6.10 Reports
+
+All reports shall support:
+
+Date-range filters — custom range, this month, last month, last 3 months, this year, last year
+
+Branch filter — single branch, multiple branches, or all
+
+Customer filter — by customer name or mobile number
+
+Cycle filter — by cycle number or delivery date
+
+Item filter — by item name, in English or Tamil
+
+All reports shall be exportable to Excel and PDF, with correct Tamil rendering in both.
+
+ID
+
+Report
+
+FR-10.1
+
+Customer value report — total orders, total quantity, total value, average order value and last order date per customer, sortable, to identify the most valuable customers.
+
+FR-10.2
+
+Item movement report — total quantity and value per item over the selected period, to show what sells and what does not.
+
+FR-10.3
+
+Customer–item report — which items a given customer orders and how often, and conversely which customers order a given item.
+
+FR-10.4
+
+Cycle summary report — per cycle: customers ordered, total orders, total quantity, total value, item count.
+
+FR-10.5
+
+Branch comparison report — the above metrics side by side across branches (Super Admin only).
+
+FR-10.6
+
+Lapsed customer report — registered customers who have not ordered in the last N cycles, with phone numbers, for follow-up calling.
+
+FR-10.7
+
+Non-collection report — customers with non-collection flags, with counts and cycles affected.
+
+7. Non-functional requirements
+
+ID
+
+Requirement
+
+NFR-1
+
+Mobile first. The majority of customers will order on mobile phones. The customer interface shall be designed for mobile screens first and adapted upward to desktop, not the reverse.
+
+NFR-2
+
+Fully responsive across screen widths from 320px upward.
+
+NFR-3
+
+Ordering page shall load in under 3 seconds on a 4G connection on a mid-range Android device.
+
+NFR-4
+
+Tested and working on Chrome (Android), Safari (iOS), and the in-app browsers of WhatsApp and Instagram.
+
+NFR-5
+
+Tamil Unicode support end to end: database collation (utf8mb4 or equivalent), form input, display, search, PDF export, Excel export and printed Order Sheets. PDF generation must embed a Tamil-capable font such as Noto Sans Tamil. Tamil text failing to render in any export or printout will be treated as a defect.
+
+NFR-6
+
+Interface shall be bilingual Tamil and English, with item names shown in both.
+
+NFR-7
+
+Large tap targets and high-contrast text. Many customers are not frequent app users.
+
+NFR-8
+
+All date and time handling in IST (UTC+5:30).
+
+NFR-9
+
+Customer personal data (name, phone, address) shall be stored securely and be accessible only to authenticated admin users of the relevant branch.
+
+NFR-10
+
+Admin accounts shall use individual logins with strong passwords. No shared accounts.
+
+NFR-11
+
+Site shall be served over HTTPS with a valid certificate.
+
+NFR-12
+
+Automated daily database backups with at least 30 days retention, restorable on request.
+
+NFR-13
+
+System shall support the scale stated in section 10 without degradation.
+
+NFR-14
+
+The system shall be built so that customer messaging (SMS or WhatsApp) and payment collection can be added later without redesigning the data model or core workflow. These are not to be built now.
+
+8. Key data entities
+
+The vendor should confirm the data model before build. At minimum:
+
+Branch — id, name, address, WhatsApp enquiry number, customer support number, pickup address, pickup timing, active flag
+
+Customer — id, name, mobile (unique), alternate mobile, branch, address, area, default delivery mode, active flag, non-collection count, created date, created by
+
+MasterItem — id, name (English), name (Tamil), category, unit, default quantity options, minimum quantity, maximum quantity, image, active flag
+
+Cycle — id, branch, cycle number, open date-time, close date-time, delivery date, status
+
+CycleItem — cycle, master item, price for this cycle, max available quantity, min/max override, sold-out flag
+
+Order — id, order number, customer, cycle, delivery mode, delivery address, notes, status, tentative total, non-collection flag, non-collection reason, created by, created date
+
+OrderLine — order, cycle item, quantity, unit, rate, line total
+
+AdminUser — id, name, email, role, branch, active flag
+
+AuditLog — user, action, entity, entity id, before value, after value, timestamp
+
+9. Acceptance criteria
+
+The system shall be accepted only after the following are demonstrated on a staging environment with realistic data:
+
+A full cycle completed end to end: customer registered by admin → cycle opened with close date-time → 20+ test orders placed → live dashboard checked mid-cycle → "Not Yet Ordered" list produced → farm order exported → Order Sheets printed → non-collection marked → cycle closed.
+
+Quantity validation works. Entering 500 against an item priced in kg with a 10 kg maximum is rejected with a clear message. Entering 0.5 is accepted.
+
+Tamil item names display correctly in the customer interface, admin panel, PDF export, Excel export and printed Order Sheets.
+
+The store closes automatically at the close date-time entered when the cycle was opened.
+
+A customer whose number is not registered receives the correct message, not an error.
+
+Branch-specific WhatsApp and support numbers appear correctly for customers of different branches.
+
+Admin can place an order while the store is closed.
+
+"Same as last order" correctly excludes items unavailable in the current cycle and re-validates quantities.
+
+Branch Admin of Branch A cannot view or edit any data belonging to Branch B.
+
+Non-collection flags raised in one cycle appear as an alert when the next cycle is opened.
+
+All reports produce correct figures against a manually verified dataset, under every filter combination (branch, customer, cycle, item, date range).
+
+Ordering interface verified on at least three physical Android devices and one iPhone.
+
+Two cycles running concurrently at two different branches with different schedules and different close times, without data crossover.
+
+10. Information required from the client
+
+Complete before issuing this document. Vendors cannot size the work without these.
+
+Item
+
+Value
+
+Number of branches at launch
+
+[1 ]
+
+Number of branches expected within 12 months
+
+[ 3]
+
+Registered customers per branch at launch
+
+[Approx 30 ]
+
+Expected customers per branch within 12 months
+
+[75 ]
+
+Peak concurrent users during an order window
+
+[10 ]
+
+Items in the master list
+
+[ 60]
+
+Items typically available per cycle
+
+[ 30]
+
+Required go-live date
+
+[ ]
+
+Preferred technology stack, if any
+
+[or "vendor's recommendation"]
+
+Hosting preference
+
+[e.g. our own account / vendor-managed]
+
+11. Deliverables and handover
+
+Fully functional application, complete in all respects, deployed to production on hosting owned by and under the control of Nalla Kadai.
+
+Complete source code with version control access transferred to Nalla Kadai.
+
+Database schema documentation.
+
+Admin user manual in English, with a short Tamil quick-reference for branch staff.
+
+Two training sessions for admin and branch staff.
+
+Intensive testing completed before delivery, evidenced by a written test report covering every acceptance criterion in section 9.
+
+Defect-fix warranty period of 3 months from go-live at no additional cost.
+
+Written quotation for ongoing support and enhancement beyond the warranty period.

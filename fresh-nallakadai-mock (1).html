@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fresh நல்ல கடை — Ordering System Mock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rozha+One&family=Poppins:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --maroon:#7B1E1E;
+  --maroon-dark:#4F1212;
+  --olive:#7C9A46;
+  --olive-dark:#5E7A34;
+  --cream:#FBF7EC;
+  --cream-2:#F3ECD9;
+  --paper:#FFFDF8;
+  --ink:#2B1B12;
+  --ink-soft:#6B5A4A;
+  --gold:#C9A227;
+  --line:#E7DFC9;
+  --tint-veg:#EAF3DD;
+  --tint-greens:#DCEBD3;
+  --tint-fruits:#FBE9D8;
+  --tint-dairy:#EFF3FA;
+  --tint-vegan:#F1EEDD;
+  --danger:#B0311C;
+  --ok:#3D7A2F;
+  --radius:14px;
+  --shadow:0 6px 20px rgba(75,30,10,0.10);
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:'Poppins',sans-serif;color:var(--ink);background:var(--cream);}
+.ta{font-family:'Noto Sans Tamil','Poppins',sans-serif;}
+h1,h2,h3,.display{font-family:'Rozha One','Noto Sans Tamil',serif;font-weight:400;}
+button{font-family:inherit;cursor:pointer;}
+img{max-width:100%;}
+.hidden{display:none !important;}
+
+/* ---------- devbar ---------- */
+#devbar{position:fixed;top:0;left:0;right:0;z-index:9999;background:#1c1c1c;color:#eee;
+  display:flex;align-items:center;gap:10px;padding:8px 14px;font-size:12px;}
+#devbar b{color:#e9c15a;font-weight:600;}
+#devbar .spacer{flex:1;}
+#devbar button{background:#333;color:#fff;border:1px solid #555;border-radius:20px;padding:6px 14px;font-size:12px;}
+#devbar button.active{background:var(--olive);border-color:var(--olive);}
+#devbar select{background:#333;color:#fff;border:1px solid #555;border-radius:8px;padding:5px 8px;font-size:12px;}
+#stage{margin-top:38px;}
+
+/* ---------- header / nav (matches supplied theme) ---------- */
+.site-header{background:#fff;padding:14px 24px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;border-bottom:1px solid var(--line);}
+.logo{font-family:'Noto Sans Tamil',serif;font-weight:700;color:var(--maroon);font-size:22px;display:flex;flex-direction:column;line-height:1;}
+.logo small{font-size:9px;letter-spacing:2px;color:var(--olive);font-family:'Poppins';font-weight:600;}
+.search-fake{flex:1;min-width:160px;background:#F3F3F1;border-radius:24px;padding:9px 16px;color:#9a938a;font-size:13px;display:flex;justify-content:space-between;align-items:center;}
+.search-fake span.btn{background:var(--ink);color:#fff;border-radius:20px;padding:5px 14px;font-size:12px;}
+.callus{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink-soft);white-space:nowrap;}
+.callus b{display:block;color:var(--maroon);font-size:14px;}
+.headicon{width:34px;height:34px;border-radius:50%;background:var(--cream-2);display:flex;align-items:center;justify-content:center;font-size:15px;position:relative;}
+.headicon .badge{position:absolute;top:-4px;right:-4px;background:var(--gold);color:#fff;font-size:9px;border-radius:50%;width:15px;height:15px;display:flex;align-items:center;justify-content:center;}
+.navbar{background:var(--maroon);display:flex;align-items:center;gap:26px;padding:0 24px;flex-wrap:wrap;}
+.navbar .pill{background:var(--olive);color:#fff;border:none;border-radius:22px;padding:10px 18px;font-weight:600;font-size:13px;margin:8px 0;}
+.navbar a{color:#fff;text-decoration:none;font-size:14px;font-weight:500;padding:14px 0;opacity:.92;}
+.navbar a.active{border-bottom:2px solid #fff;opacity:1;}
+.branch-tag{margin-left:auto;color:#f3e6c8;font-size:12px;background:rgba(255,255,255,.12);padding:5px 12px;border-radius:14px;}
+
+/* ---------- customer screens ---------- */
+.screen{max-width:760px;margin:0 auto;padding:26px 18px 120px;}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);}
+.center{text-align:center;}
+.muted{color:var(--ink-soft);font-size:13.5px;}
+.big-input{width:100%;font-size:22px;letter-spacing:2px;padding:14px 16px;border:2px solid var(--line);border-radius:12px;text-align:center;font-family:'Poppins';margin:14px 0;}
+.big-input:focus{outline:none;border-color:var(--olive);}
+.btn{display:inline-block;border:none;border-radius:24px;padding:13px 26px;font-weight:600;font-size:14.5px;transition:.15s;}
+.btn-primary{background:var(--olive);color:#fff;}
+.btn-primary:hover{background:var(--olive-dark);}
+.btn-maroon{background:var(--maroon);color:#fff;}
+.btn-maroon:hover{background:var(--maroon-dark);}
+.btn-outline{background:transparent;border:1.5px solid var(--maroon);color:var(--maroon);}
+.btn-block{width:100%;text-align:center;}
+.btn:disabled{opacity:.45;cursor:not-allowed;}
+.wa-btn{background:#25D366;color:#fff;border:none;border-radius:24px;padding:12px 20px;font-weight:600;display:inline-flex;align-items:center;gap:8px;}
+.notice{background:#FCF3E4;border:1px solid #EBD9AE;color:#7A5A16;border-radius:10px;padding:12px 14px;font-size:13px;margin-top:14px;}
+.notice.soft{background:var(--tint-dairy);border-color:#cfd8ea;color:#39445c;}
+
+.greet{background:linear-gradient(120deg,var(--maroon),var(--maroon-dark));color:#fff;border-radius:var(--radius);padding:18px 20px;margin-bottom:18px;}
+.greet .del-date{background:rgba(255,255,255,.14);display:inline-block;padding:4px 12px;border-radius:14px;font-size:12px;margin-top:6px;}
+
+.repeat-bar{display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px dashed var(--olive);border-radius:12px;padding:12px 16px;margin-bottom:16px;}
+
+.cat-block{border-radius:var(--radius);margin-bottom:16px;padding:14px 14px 6px;}
+.cat-block.veg{background:var(--tint-veg);}
+.cat-block.greens{background:var(--tint-greens);}
+.cat-block.fruits{background:var(--tint-fruits);}
+.cat-block.dairy{background:var(--tint-dairy);}
+.cat-block.vegan{background:var(--tint-vegan);}
+.cat-title{display:flex;align-items:center;gap:8px;font-family:'Rozha One',serif;font-size:19px;color:var(--maroon-dark);margin-bottom:8px;}
+.cat-title .ta{font-family:'Noto Sans Tamil';font-size:14px;color:var(--ink-soft);}
+
+.item-row{background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start;}
+.item-thumb{width:52px;height:52px;border-radius:10px;background:var(--cream-2);display:flex;align-items:center;justify-content:center;font-size:22px;flex:none;}
+.item-main{flex:1;min-width:0;}
+.item-name{font-weight:600;font-size:14.5px;}
+.item-name .ta{font-size:12.5px;color:var(--ink-soft);font-weight:400;display:block;}
+.item-meta{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+.item-price{font-weight:700;color:var(--maroon);font-size:13.5px;}
+.soldout{color:var(--danger);font-weight:600;font-size:11.5px;}
+.qty-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center;}
+.preset-btn{border:1.4px solid var(--line);background:#fff;border-radius:16px;padding:5px 12px;font-size:12.5px;font-weight:600;}
+.preset-btn.active{background:var(--olive);border-color:var(--olive);color:#fff;}
+.free-wrap{display:flex;align-items:center;gap:6px;}
+.free-input{width:66px;border:1.4px solid var(--line);border-radius:10px;padding:5px 8px;font-size:13px;text-align:center;}
+.free-input.err{border-color:var(--danger);background:#FCEEEA;}
+.unit-tag{font-size:11.5px;background:var(--cream-2);border-radius:8px;padding:4px 8px;font-weight:600;color:var(--ink-soft);}
+.field-err{color:var(--danger);font-size:11.5px;margin-top:4px;display:none;}
+.line-total{font-size:12px;color:var(--olive-dark);font-weight:600;margin-top:5px;}
+
+.delivery-box{background:#fff;border-radius:var(--radius);padding:16px;margin-top:8px;border:1px solid var(--line);}
+.mode-toggle{display:flex;gap:10px;margin:10px 0;}
+.mode-opt{flex:1;border:1.6px solid var(--line);border-radius:12px;padding:12px;text-align:center;font-weight:600;font-size:13px;}
+.mode-opt.active{border-color:var(--olive);background:var(--tint-veg);}
+textarea.note{width:100%;border:1.4px solid var(--line);border-radius:10px;padding:10px;font-family:inherit;font-size:13px;min-height:56px;}
+
+.cartbar{position:fixed;left:0;right:0;bottom:0;background:var(--maroon);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 -6px 18px rgba(0,0,0,.18);z-index:500;}
+.cartbar b{font-size:15px;}
+.cartbar .btn{background:var(--olive);}
+
+.overlay{position:fixed;inset:0;background:rgba(30,15,10,.45);z-index:600;display:flex;align-items:flex-end;justify-content:center;}
+.sheet{background:var(--cream);width:100%;max-width:760px;border-radius:20px 20px 0 0;max-height:88vh;overflow:auto;padding:20px;}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.cart-line{background:#fff;border-radius:10px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.cart-line .rm{color:var(--danger);font-size:12px;font-weight:600;background:none;border:none;}
+.cart-total-row{display:flex;justify-content:space-between;font-weight:700;font-size:16px;padding:14px 0;border-top:2px dashed var(--line);margin-top:8px;}
+
+.confirm-badge{width:64px;height:64px;border-radius:50%;background:var(--olive);color:#fff;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 12px;}
+.orderno{font-family:'Rozha One',serif;font-size:26px;color:var(--maroon);}
+
+.wa-float{position:fixed;bottom:20px;right:20px;background:#25D366;color:#fff;width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 6px 14px rgba(0,0,0,.25);text-decoration:none;z-index:400;}
+
+/* ---------- admin ---------- */
+#adminApp{display:flex;min-height:calc(100vh - 38px);}
+.asidebar{width:220px;background:#fff;border-right:1px solid var(--line);flex:none;padding:16px 0;}
+.asidebar .brand{padding:0 18px 14px;border-bottom:1px solid var(--line);margin-bottom:10px;}
+.asidebar .brand b{color:var(--maroon);font-family:'Rozha One',serif;font-size:19px;}
+.asidebar .roletag{display:inline-block;background:var(--tint-veg);color:var(--olive-dark);font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:10px;margin-top:4px;}
+.anavgroup{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:#b0a48f;padding:12px 18px 4px;}
+.anavitem{display:block;padding:10px 18px;font-size:13.5px;color:var(--ink);text-decoration:none;border-left:3px solid transparent;cursor:pointer;}
+.anavitem:hover{background:var(--cream);}
+.anavitem.active{background:var(--tint-veg);border-left-color:var(--olive);color:var(--olive-dark);font-weight:600;}
+.amain{flex:1;padding:22px 26px;max-width:1180px;}
+.atopbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+.atopbar h2{margin:0;font-size:24px;color:var(--maroon-dark);}
+.abadgebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+select.asel{border:1.4px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px;background:#fff;}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px;}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;}
+.kpi .n{font-family:'Rozha One',serif;font-size:26px;color:var(--maroon);}
+.kpi .l{font-size:11.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.5px;}
+
+.panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:18px;}
+.panel h3{margin:0 0 12px;font-size:16px;color:var(--maroon-dark);font-family:'Poppins';font-weight:600;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;background:var(--cream);color:var(--ink-soft);font-size:11px;text-transform:uppercase;letter-spacing:.4px;padding:9px 10px;border-bottom:1px solid var(--line);}
+td{padding:9px 10px;border-bottom:1px solid #F0EBDA;vertical-align:middle;}
+tr:hover td{background:#FCFAF2;}
+.tag{display:inline-block;padding:2px 9px;border-radius:10px;font-size:10.5px;font-weight:700;}
+.tag.open{background:#E4F3DE;color:var(--ok);}
+.tag.closed{background:#F5E3DE;color:var(--danger);}
+.tag.draft{background:#EEE7D2;color:#8a7a4e;}
+.tag.delivered{background:#dde7f5;color:#33517a;}
+.small-btn{border:1.3px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;font-size:11.5px;font-weight:600;}
+.small-btn.primary{background:var(--olive);border-color:var(--olive);color:#fff;}
+.small-btn.danger{background:#fff;border-color:var(--danger);color:var(--danger);}
+.small-btn.maroon{background:var(--maroon);border-color:var(--maroon);color:#fff;}
+.inline-input{border:1.3px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12.5px;width:100%;}
+.flexrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink-soft);}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+@media (max-width:760px){.grid2,.grid3{grid-template-columns:1fr;} #adminApp{flex-direction:column;} .asidebar{width:100%;display:flex;overflow-x:auto;white-space:nowrap;padding:8px;} .anavgroup{display:none;} .anavitem{display:inline-block;} }
+.audit-note{font-size:11px;color:var(--ink-soft);}
+.alertbox{background:#FBEAE2;border:1px solid #EFC3AE;color:#8A3B1B;padding:12px 14px;border-radius:10px;margin-bottom:14px;font-size:13px;}
+.alertbox b{display:block;margin-bottom:4px;}
+.checklist label{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;margin-bottom:6px;}
+.modal-bg{position:fixed;inset:0;background:rgba(30,15,10,.5);z-index:700;display:flex;align-items:center;justify-content:center;padding:16px;}
+.modal{background:#fff;border-radius:14px;padding:22px;max-width:560px;width:100%;max-height:86vh;overflow:auto;}
+.modal h3{margin-top:0;}
+.close-x{float:right;background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink-soft);}
+
+.printable{display:none;}
+@media print{
+  body *{visibility:hidden;}
+  #printArea, #printArea *{visibility:visible;}
+  #printArea{position:absolute;top:0;left:0;width:100%;padding:12px;}
+  .sheet-card{page-break-after:always;border:1px solid #333;padding:14px;margin-bottom:10px;}
+}
+.sheet-card{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:10px;background:#fff;}
+.sheet-card h4{margin:0 0 6px;font-family:'Poppins';color:var(--maroon-dark);}
+.sheet-card table{margin-top:6px;}
+</style>
+</head>
+<body>
+
+<div id="devbar">
+  <b>MOCK CONTROL</b>
+  <button id="btnCustomerView" class="active">Customer view</button>
+  <button id="btnAdminView">Admin view</button>
+  <span class="spacer"></span>
+  <span>Cycle status:</span>
+  <select id="devCycleStatus">
+    <option value="Open">Open (Erode Main)</option>
+    <option value="Closed">Closed (Erode Main)</option>
+  </select>
+  <span>Show Prices:</span>
+  <select id="devShowPrices"><option value="1">On</option><option value="0">Off</option></select>
+</div>
+
+<div id="stage">
+
+<!-- =================== CUSTOMER APP =================== -->
+<div id="customerApp">
+  <header class="site-header">
+    <div class="logo">நல்ல கடை<small>FRESH &nbsp;ORGANIC</small></div>
+    <div class="search-fake"><span>Search Products…</span><span class="btn">Search</span></div>
+    <div class="callus">🎧 <span>CALL US 24/7<b id="custSupportNo">+91 81223 70430</b></span></div>
+    <div class="headicon">👤</div>
+    <div class="headicon">♡<span class="badge">0</span></div>
+    <div class="headicon">🧺<span class="badge">0</span></div>
+  </header>
+  <div class="navbar">
+    <button class="pill">☰ Shop By Categories</button>
+    <a class="active">Home</a><a>About Us</a><a>Shop</a><a>Contact</a>
+    <span class="branch-tag" id="custBranchTag">Branch: Erode Main</span>
+  </div>
+
+  <!-- SCREEN: mobile entry -->
+  <div class="screen" id="scr-entry">
+    <div class="card center" style="max-width:420px;margin:40px auto;">
+      <div style="font-size:34px;">🥬</div>
+      <h2 style="margin:8px 0 2px;">Order Fresh with Us</h2>
+      <p class="muted">Enter your registered mobile number to open your Fresh store.</p>
+      <input class="big-input" id="mobileInput" maxlength="10" placeholder="10-digit mobile number" inputmode="numeric">
+      <button class="btn btn-primary btn-block" onclick="handleMobileSubmit()">Continue</button>
+      <p class="muted" style="margin-top:14px;">New here? Scan your branch QR code or message us on WhatsApp to get registered.</p>
+    </div>
+  </div>
+
+  <!-- SCREEN: not registered -->
+  <div class="screen hidden" id="scr-notreg">
+    <div class="card center" style="max-width:440px;margin:40px auto;">
+      <div style="font-size:34px;">📵</div>
+      <h2 style="margin:8px 0 2px;">We don't have this number yet</h2>
+      <p class="muted">This mobile number isn't registered with Fresh நல்ல கடை. Message us on WhatsApp with your name, delivery preference and location, and we'll get you set up.</p>
+      <a class="wa-btn" style="margin-top:14px;" href="#" onclick="return false;">💬 Message us on WhatsApp</a>
+      <div><button class="btn btn-outline" style="margin-top:16px;" onclick="goTo('entry')">← Try another number</button></div>
+    </div>
+  </div>
+
+  <!-- SCREEN: store closed -->
+  <div class="screen hidden" id="scr-closed">
+    <div class="card center" style="max-width:440px;margin:40px auto;">
+      <div style="font-size:34px;">⏳</div>
+      <h2 style="margin:8px 0 2px;">Our Fresh store will open soon</h2>
+      <p class="muted">For any queries please call <b id="closedSupportNo">+91 81223 70430</b>.</p>
+      <div class="notice">Next expected opening: <b>Saturday, 15 Aug 2026</b></div>
+      <div><button class="btn btn-outline" style="margin-top:16px;" onclick="goTo('entry')">← Back</button></div>
+    </div>
+  </div>
+
+  <!-- SCREEN: ordering -->
+  <div class="screen hidden" id="scr-order">
+    <div class="greet">
+      <div style="font-size:12px;opacity:.8;">Welcome back</div>
+      <div style="font-family:'Rozha One',serif;font-size:22px;" id="custGreetName">Kavitha</div>
+      <div style="font-size:12.5px;opacity:.9;" id="custGreetBranch">Erode Main branch · Cycle #4</div>
+      <div class="del-date">Expected delivery: <b id="custDelDate">Tue, 12 Aug 2026</b></div>
+    </div>
+
+    <div class="repeat-bar" id="repeatBar">
+      <div><b style="font-size:13.5px;">Order like last time?</b><div class="muted" style="font-size:12px;">Pre-fill your cart from your most recent order.</div></div>
+      <button class="btn btn-outline" onclick="repeatLastOrder()">Same as last order</button>
+    </div>
+    <div id="repeatDroppedNotice"></div>
+
+    <div id="categoryBlocks"></div>
+
+    <div class="delivery-box">
+      <h3 style="margin:0 0 6px;font-size:15px;">Delivery for this order</h3>
+      <div class="mode-toggle">
+        <div class="mode-opt" id="modeDoor" onclick="setDeliveryMode('Door Delivery')">🚚 Door Delivery</div>
+        <div class="mode-opt" id="modePickup" onclick="setDeliveryMode('Customer Pickup')">🏬 Customer Pickup</div>
+      </div>
+      <div id="deliveryDetail" class="muted" style="font-size:12.5px;"></div>
+      <div style="margin-top:12px;">
+        <label style="font-size:12.5px;font-weight:600;">Note for this order (optional)</label>
+        <textarea class="note" id="orderNote" placeholder="e.g. Please pack greens separately"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN: confirmation -->
+  <div class="screen hidden" id="scr-confirm">
+    <div class="card center" style="max-width:480px;margin:30px auto;">
+      <div class="confirm-badge">✓</div>
+      <h2 style="margin:0;">Order placed!</h2>
+      <div class="orderno" id="confirmOrderNo">FNK-1042</div>
+      <p class="muted">Expected delivery: <b id="confirmDelDate">Tue, 12 Aug 2026</b></p>
+      <div id="confirmSummary" style="text-align:left;margin-top:14px;"></div>
+      <div class="notice">You can view or edit this order any time until the order window closes.</div>
+      <button class="btn btn-maroon" style="margin-top:14px;" onclick="viewSubmittedOrder()">View / Edit my order</button>
+    </div>
+  </div>
+
+  <!-- SCREEN: locked (window closed, already ordered) -->
+  <div class="screen hidden" id="scr-locked">
+    <div class="card center" style="max-width:440px;margin:30px auto;">
+      <div style="font-size:34px;">🔒</div>
+      <h2 style="margin:6px 0;">This order window has closed</h2>
+      <div class="orderno" id="lockedOrderNo">FNK-1042</div>
+      <p class="muted">Your order is locked for picking. For changes please call <b id="lockedSupportNo">+91 81223 70430</b>.</p>
+      <div id="lockedSummary" style="text-align:left;margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <a class="wa-float" href="#" onclick="return false;">💬</a>
+
+  <!-- cart bar -->
+  <div class="cartbar hidden" id="cartbar">
+    <div><b id="cartbarCount">0 items</b><div style="font-size:11.5px;opacity:.85;" id="cartbarTotal"></div></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn" style="background:rgba(255,255,255,.18);color:#fff;" onclick="openCartSheet()">View Cart</button>
+      <button class="btn btn-primary" onclick="submitOrder()">Place Order</button>
+    </div>
+  </div>
+</div>
+<!-- =================== /CUSTOMER APP =================== -->
+
+
+<!-- =================== ADMIN APP =================== -->
+<div id="adminApp" class="hidden">
+  <div class="asidebar">
+    <div class="brand"><b>நல்ல கடை</b><div class="muted" style="font-size:11.5px;">Fresh Admin</div>
+      <div class="roletag" id="roleTag">Super Admin</div>
+    </div>
+    <div style="padding:0 18px 10px;">
+      <select class="asel" id="adminRoleSel" style="width:100%;margin-bottom:6px;">
+        <option value="super">Super Admin</option>
+        <option value="branch">Branch Admin</option>
+      </select>
+      <select class="asel" id="adminBranchSel" style="width:100%;"></select>
+    </div>
+    <div class="anavgroup">Operate</div>
+    <a class="anavitem active" data-view="dashboard">Dashboard</a>
+    <a class="anavitem" data-view="cycles">Cycles</a>
+    <a class="anavitem" data-view="availability">Cycle Availability</a>
+    <a class="anavitem" data-view="orders">Orders</a>
+    <a class="anavitem" data-view="farmorder">Farm Order</a>
+    <a class="anavitem" data-view="ordersheets">Order Sheets</a>
+    <a class="anavitem" data-view="noncollection">Non-collection</a>
+    <a class="anavitem" data-view="customers">Customers</a>
+    <div class="anavgroup">Configure</div>
+    <a class="anavitem" data-view="masteritems">Master Items</a>
+    <a class="anavitem super-only" data-view="branches">Branches</a>
+    <div class="anavgroup">Insights</div>
+    <a class="anavitem" data-view="reports">Reports</a>
+    <a class="anavitem super-only" data-view="audit">Audit Log</a>
+  </div>
+
+  <div class="amain">
+    <div class="atopbar">
+      <h2 id="adminTitle">Dashboard</h2>
+      <div class="abadgebar" id="adminTopExtras"></div>
+    </div>
+    <div id="adminBody"></div>
+  </div>
+</div>
+<!-- =================== /ADMIN APP =================== -->
+
+</div>
+
+<div id="printArea" class="printable"></div>
+
+<script>
+/* ============================================================
+   DATA MODEL (in-memory mock — resets on page reload)
+   ============================================================ */
+let branches = [
+  {id:'B1', name:'Erode Main', address:'123 Perundurai Rd, Erode', whatsapp:'918122370430', support:'+91 81223 70430', pickup:'Nalla Kadai Erode Main, Perundurai Rd', pickupTiming:'10 AM – 7 PM'},
+  {id:'B2', name:'Perundurai', address:'45 Bypass Rd, Perundurai', whatsapp:'919894445566', support:'+91 98944 45566', pickup:'Nalla Kadai Perundurai, Bypass Rd', pickupTiming:'9 AM – 6 PM'},
+];
+
+let masterItems = [
+  {id:'I1', nameEn:'Tomato', nameTa:'தக்காளி', category:'Vegetables', unit:'Kg', presets:[1,2,5], min:0.25, max:10, active:true, icon:'🍅'},
+  {id:'I2', nameEn:'Ladies Finger', nameTa:'வெண்டைக்காய்', category:'Vegetables', unit:'Kg', presets:[0.5,1,2], min:0.25, max:8, active:true, icon:'🥒'},
+  {id:'I3', nameEn:'Brinjal', nameTa:'கத்தரிக்காய்', category:'Vegetables', unit:'Kg', presets:[0.5,1,2], min:0.25, max:8, active:true, icon:'🍆'},
+  {id:'I4', nameEn:'Onion', nameTa:'வெங்காயம்', category:'Vegetables', unit:'Kg', presets:[1,2,5], min:0.5, max:15, active:true, icon:'🧅'},
+  {id:'I5', nameEn:'Potato', nameTa:'உருளைக்கிழங்கு', category:'Vegetables', unit:'Kg', presets:[1,2,5], min:0.5, max:15, active:true, icon:'🥔'},
+  {id:'I6', nameEn:'Ridge Gourd', nameTa:'பீர்க்கங்காய்', category:'Vegetables', unit:'Kg', presets:[0.5,1], min:0.25, max:6, active:true, icon:'🥒'},
+  {id:'I7', nameEn:'Drumstick', nameTa:'முருங்கைக்காய்', category:'Vegetables', unit:'Nos', presets:[3,5,10], min:1, max:30, active:true, icon:'🌿'},
+  {id:'I8', nameEn:'Nut Grass Tuber', nameTa:'கோரைகிழங்கு', category:'Vegetables', unit:'Gram', presets:[250,500], min:100, max:2000, active:true, icon:'🥜'},
+  {id:'I9', nameEn:'Spinach', nameTa:'பசலைக் கீரை', category:'Greens', unit:'Nos', presets:[1,2,3], min:1, max:10, active:true, icon:'🥬'},
+  {id:'I10', nameEn:'Radish Greens', nameTa:'முள்ளங்கி கீரை', category:'Greens', unit:'Nos', presets:[1,2,3], min:1, max:10, active:true, icon:'🥬'},
+  {id:'I11', nameEn:'Ponnanganni Greens', nameTa:'பொன்னாங்கண்ணி கீரை', category:'Greens', unit:'Nos', presets:[1,2], min:1, max:8, active:true, icon:'🥬'},
+  {id:'I12', nameEn:'Banana', nameTa:'வாழைப்பழம்', category:'Fruits', unit:'Kg', presets:[1,2,3], min:0.5, max:10, active:true, icon:'🍌'},
+  {id:'I13', nameEn:'Papaya', nameTa:'பப்பாளி', category:'Fruits', unit:'Kg', presets:[1,2], min:0.5, max:6, active:true, icon:'🍈'},
+  {id:'I14', nameEn:'Mango', nameTa:'மாம்பழம்', category:'Fruits', unit:'Kg', presets:[1,2,3], min:0.5, max:10, active:true, icon:'🥭'},
+  {id:'I15', nameEn:'Watermelon', nameTa:'தர்பூசணி', category:'Fruits', unit:'Nos', presets:[1,2], min:1, max:5, active:true, icon:'🍉'},
+  {id:'I16', nameEn:'Cow Ghee', nameTa:'பசு நெய்', category:'Dairy', unit:'Ml', presets:[250,500,1000], min:100, max:2000, active:true, icon:'🧈'},
+  {id:'I17', nameEn:'Curd', nameTa:'தயிர்', category:'Dairy', unit:'Litre', presets:[0.5,1], min:0.25, max:5, active:true, icon:'🥛'},
+  {id:'I18', nameEn:'Milk', nameTa:'பால்', category:'Dairy', unit:'Litre', presets:[0.5,1,2], min:0.5, max:6, active:true, icon:'🥛'},
+  {id:'I19', nameEn:'Paneer', nameTa:'பன்னீர்', category:'Dairy', unit:'Gram', presets:[250,500], min:100, max:2000, active:true, icon:'🧀'},
+  {id:'I20', nameEn:'Soy Milk', nameTa:'சோயா பால்', category:'Vegan', unit:'Litre', presets:[0.5,1], min:0.5, max:5, active:true, icon:'🥛'},
+  {id:'I21', nameEn:'Coconut Oil', nameTa:'தேங்காய் எண்ணெய்', category:'Vegan', unit:'Ml', presets:[250,500,1000], min:200, max:3000, active:true, icon:'🥥'},
+];
+
+let categories = ['Vegetables','Greens','Fruits','Dairy','Vegan'];
+let catClass = {Vegetables:'veg', Greens:'greens', Fruits:'fruits', Dairy:'dairy', Vegan:'vegan'};
+let catTa = {Vegetables:'காய்கறிகள்', Greens:'கீரைகள்', Fruits:'பழங்கள்', Dairy:'பால் பொருட்கள்', Vegan:'வீகன்'};
+
+let cycles = [
+  {id:'C1', branchId:'B1', cycleNo:4, openAt:'2026-08-08 18:00', closeAt:'2026-08-10 20:00', deliveryDate:'2026-08-12', status:'Open'},
+  {id:'C0', branchId:'B1', cycleNo:3, openAt:'2026-08-01 18:00', closeAt:'2026-08-03 20:00', deliveryDate:'2026-08-05', status:'Delivered'},
+  {id:'C2', branchId:'B2', cycleNo:2, openAt:'2026-08-08 18:00', closeAt:'2026-08-10 20:00', deliveryDate:'2026-08-14', status:'Open'},
+];
+
+// price/availability per cycle
+let cycleItems = [
+  // Cycle C1 (Erode Main, current)
+  {cycleId:'C1', itemId:'I1', price:38, maxQty:80, soldOut:false},
+  {cycleId:'C1', itemId:'I2', price:52, maxQty:40, soldOut:false},
+  {cycleId:'C1', itemId:'I3', price:34, maxQty:30, soldOut:false},
+  {cycleId:'C1', itemId:'I4', price:30, maxQty:100, soldOut:false},
+  {cycleId:'C1', itemId:'I5', price:28, maxQty:100, soldOut:false},
+  {cycleId:'C1', itemId:'I7', price:8, maxQty:200, soldOut:false, minOverride:1, maxOverride:20},
+  {cycleId:'C1', itemId:'I9', price:15, maxQty:60, soldOut:false},
+  {cycleId:'C1', itemId:'I10', price:15, maxQty:40, soldOut:true},
+  {cycleId:'C1', itemId:'I12', price:55, maxQty:50, soldOut:false},
+  {cycleId:'C1', itemId:'I14', price:90, maxQty:40, soldOut:false},
+  {cycleId:'C1', itemId:'I16', price:650, maxQty:20, soldOut:false},
+  {cycleId:'C1', itemId:'I17', price:70, maxQty:30, soldOut:false},
+  {cycleId:'C1', itemId:'I18', price:60, maxQty:60, soldOut:false},
+  {cycleId:'C1', itemId:'I19', price:90, maxQty:20, soldOut:false},
+  {cycleId:'C1', itemId:'I21', price:220, maxQty:20, soldOut:false},
+  // Cycle C0 (previous, delivered) — for "repeat last order" test, includes I10 (radish greens) which is sold out now, and I6 not offered this cycle
+  {cycleId:'C0', itemId:'I1', price:32, maxQty:80, soldOut:false},
+  {cycleId:'C0', itemId:'I6', price:40, maxQty:20, soldOut:false},
+  {cycleId:'C0', itemId:'I10', price:14, maxQty:30, soldOut:false},
+  {cycleId:'C0', itemId:'I12', price:50, maxQty:40, soldOut:false},
+  {cycleId:'C0', itemId:'I17', price:65, maxQty:30, soldOut:false},
+  // Cycle C2 (Perundurai)
+  {cycleId:'C2', itemId:'I1', price:36, maxQty:40, soldOut:false},
+  {cycleId:'C2', itemId:'I4', price:28, maxQty:50, soldOut:false},
+  {cycleId:'C2', itemId:'I12', price:52, maxQty:30, soldOut:false},
+  {cycleId:'C2', itemId:'I18', price:58, maxQty:30, soldOut:false},
+];
+
+let customers = [
+  {id:'CU1', name:'Kavitha Ramesh', mobile:'9876543210', altMobile:'', branchId:'B1', deliveryMode:'Door Delivery', address:'12 Gandhi St, Erode', area:'Perundurai Rd', active:true, nonCollectionCount:0},
+  {id:'CU2', name:'Suresh Babu', mobile:'9876500001', altMobile:'', branchId:'B1', deliveryMode:'Customer Pickup', address:'', area:'Sathy Rd', active:true, nonCollectionCount:1},
+  {id:'CU3', name:'Meena Sundar', mobile:'9876500002', altMobile:'9843211122', branchId:'B1', deliveryMode:'Door Delivery', address:'7 Temple St, Erode', area:'Diwan Rd', active:true, nonCollectionCount:0},
+  {id:'CU4', name:'Arun Prakash', mobile:'9876500003', altMobile:'', branchId:'B1', deliveryMode:'Door Delivery', address:'21 Bharathi Nagar', area:'Erode', active:true, nonCollectionCount:2},
+  {id:'CU5', name:'Lakshmi Devi', mobile:'9876500004', altMobile:'', branchId:'B1', deliveryMode:'Customer Pickup', address:'', area:'Erode', active:true, nonCollectionCount:0},
+  {id:'CU6', name:'Rajesh Kumar', mobile:'9876500005', altMobile:'', branchId:'B1', deliveryMode:'Door Delivery', address:'5 Mettur Rd', area:'Erode', active:true, nonCollectionCount:0},
+  {id:'CU7', name:'Priya Anand', mobile:'9876500006', altMobile:'', branchId:'B1', deliveryMode:'Door Delivery', address:'18 VOC St', area:'Erode', active:false, nonCollectionCount:0},
+  {id:'CU8', name:'Deepa Mohan', mobile:'9994400011', altMobile:'', branchId:'B2', deliveryMode:'Door Delivery', address:'2 Bypass Rd, Perundurai', area:'Perundurai', active:true, nonCollectionCount:0},
+];
+
+let orders = [
+  // previous cycle C0 order for CU1 (used for "repeat last order")
+  {id:'O0', orderNo:'FNK-0918', customerId:'CU1', cycleId:'C0', deliveryMode:'Door Delivery', address:'12 Gandhi St, Erode', notes:'', status:'Delivered', nonCollection:false, adminEntered:false,
+    lines:[
+      {itemId:'I1', qty:2, unit:'Kg', rate:32, lineTotal:64},
+      {itemId:'I6', qty:1, unit:'Kg', rate:40, lineTotal:40},
+      {itemId:'I10', qty:2, unit:'Nos', rate:14, lineTotal:28},
+      {itemId:'I17', qty:1, unit:'Litre', rate:65, lineTotal:65},
+    ], createdAt:'2026-08-02 10:14'},
+  // current cycle orders (for admin dashboard demo)
+  {id:'O1', orderNo:'FNK-1031', customerId:'CU2', cycleId:'C1', deliveryMode:'Customer Pickup', address:'', notes:'', status:'Submitted', nonCollection:false, adminEntered:false,
+    lines:[{itemId:'I1', qty:1, unit:'Kg', rate:38, lineTotal:38},{itemId:'I4', qty:2, unit:'Kg', rate:30, lineTotal:60},{itemId:'I18', qty:1, unit:'Litre', rate:60, lineTotal:60}], createdAt:'2026-08-09 09:02'},
+  {id:'O2', orderNo:'FNK-1032', customerId:'CU3', cycleId:'C1', deliveryMode:'Door Delivery', address:'7 Temple St, Erode', notes:'Ripe bananas please', status:'Submitted', nonCollection:false, adminEntered:false,
+    lines:[{itemId:'I12', qty:2, unit:'Kg', rate:55, lineTotal:110},{itemId:'I9', qty:2, unit:'Nos', rate:15, lineTotal:30},{itemId:'I16', qty:0.5, unit:'Ml', rate:650, lineTotal:325}], createdAt:'2026-08-09 11:20'},
+  {id:'O3', orderNo:'FNK-1033', customerId:'CU4', cycleId:'C1', deliveryMode:'Door Delivery', address:'21 Bharathi Nagar', notes:'', status:'Submitted', nonCollection:false, adminEntered:true,
+    lines:[{itemId:'I5', qty:5, unit:'Kg', rate:28, lineTotal:140},{itemId:'I2', qty:1, unit:'Kg', rate:52, lineTotal:52}], createdAt:'2026-08-09 15:41'},
+];
+
+let auditLog = [
+  {user:'admin.erode', action:'Edited order', entity:'Order FNK-1032', before:'Banana 1 kg', after:'Banana 2 kg', ts:'2026-08-09 12:05'},
+  {user:'super.admin', action:'Opened cycle', entity:'Cycle C1 (Erode Main #4)', before:'Draft', after:'Open', ts:'2026-08-08 18:00'},
+];
+
+let orderSeq = 1034;
+let session = { mobile:null, customer:null, branch:null, cycle:null, order:null, cart:{}, deliveryMode:null, address:'', note:'' };
+let devShowPrices = true;
+let devCycleOverride = 'Open';
+
+/* ============================================================
+   UTIL
+   ============================================================ */
+function fmtMoney(n){ return '₹' + Number(n).toLocaleString('en-IN', {maximumFractionDigits:2}); }
+function fmtQty(n){ return (Math.round(n*100)/100).toString(); }
+function itemById(id){ return masterItems.find(m=>m.id===id); }
+function cycleItemFor(cycleId, itemId){ return cycleItems.find(c=>c.cycleId===cycleId && c.itemId===itemId); }
+function branchById(id){ return branches.find(b=>b.id===id); }
+function activeCycleForBranch(branchId){
+  return cycles.find(c=>c.branchId===branchId && c.status==='Open');
+}
+
+/* ============================================================
+   DEV TOOLBAR
+   ============================================================ */
+document.getElementById('btnCustomerView').onclick = ()=> switchApp('customer');
+document.getElementById('btnAdminView').onclick = ()=> switchApp('admin');
+function switchApp(which){
+  document.getElementById('customerApp').classList.toggle('hidden', which!=='customer');
+  document.getElementById('adminApp').classList.toggle('hidden', which!=='admin');
+  document.getElementById('btnCustomerView').classList.toggle('active', which==='customer');
+  document.getElementById('btnAdminView').classList.toggle('active', which==='admin');
+  if(which==='admin') renderAdmin();
+}
+document.getElementById('devCycleStatus').onchange = function(){
+  devCycleOverride = this.value;
+  let c = cycles.find(c=>c.id==='C1');
+  c.status = this.value;
+  if(session.cycle && session.cycle.id==='C1'){ session.cycle.status = this.value; }
+  if(!document.getElementById('scr-order').classList.contains('hidden') && this.value==='Closed'){
+    goTo('locked'); renderLockedScreen();
+  }
+  if(document.getElementById('adminApp').classList.contains('hidden')===false) renderAdmin();
+};
+document.getElementById('devShowPrices').onchange = function(){
+  devShowPrices = this.value==='1';
+  if(!document.getElementById('scr-order').classList.contains('hidden')) renderOrderingScreen();
+};
+
+/* ============================================================
+   CUSTOMER FLOW
+   ============================================================ */
+function goTo(name){
+  ['entry','notreg','closed','order','confirm','locked'].forEach(s=>{
+    document.getElementById('scr-'+s).classList.toggle('hidden', s!==name);
+  });
+  document.getElementById('cartbar').classList.toggle('hidden', name!=='order');
+}
+
+function handleMobileSubmit(){
+  let mobile = document.getElementById('mobileInput').value.trim();
+  if(!mobile){ return; }
+  let cust = customers.find(c=>c.mobile===mobile);
+  if(!cust){ goTo('notreg'); return; }
+  session.mobile = mobile;
+  session.customer = cust;
+  session.branch = branchById(cust.branchId);
+  document.getElementById('custBranchTag').textContent = 'Branch: ' + session.branch.name;
+  document.getElementById('custSupportNo').textContent = session.branch.support;
+
+  let cyc = activeCycleForBranch(cust.branchId);
+  if(!cyc){
+    document.getElementById('closedSupportNo').textContent = session.branch.support;
+    goTo('closed'); return;
+  }
+  session.cycle = cyc;
+
+  // check if this customer already has a submitted order this cycle
+  let existing = orders.find(o=>o.customerId===cust.id && o.cycleId===cyc.id);
+  if(existing){
+    session.order = existing;
+    if(cyc.status!=='Open'){ renderLockedScreen(); goTo('locked'); return; }
+    loadCartFromOrder(existing);
+  } else {
+    session.order = null;
+    session.cart = {};
+    session.deliveryMode = cust.deliveryMode;
+    session.address = cust.address;
+  }
+  renderOrderingScreen();
+  goTo('order');
+}
+
+function loadCartFromOrder(order){
+  session.cart = {};
+  order.lines.forEach(l=> session.cart[l.itemId] = l.qty);
+  session.deliveryMode = order.deliveryMode;
+  session.address = order.address;
+  session.note = order.notes||'';
+}
+
+function renderOrderingScreen(){
+  let cust = session.customer, cyc = session.cycle, branch = session.branch;
+  document.getElementById('custGreetName').textContent = cust.name;
+  document.getElementById('custGreetBranch').textContent = branch.name + ' branch · Cycle #' + cyc.cycleNo;
+  document.getElementById('custDelDate').textContent = fmtDate(cyc.deliveryDate);
+
+  // repeat bar only if a previous delivered order exists and no current order yet
+  let prevOrder = orders.filter(o=>o.customerId===cust.id && o.cycleId!==cyc.id).sort((a,b)=> (a.createdAt<b.createdAt?1:-1))[0];
+  document.getElementById('repeatBar').style.display = (prevOrder && !session.order) ? 'flex' : 'none';
+
+  // category blocks
+  let wrap = document.getElementById('categoryBlocks');
+  wrap.innerHTML = '';
+  categories.forEach(cat=>{
+    let items = masterItems.filter(m=>m.category===cat && m.active && cycleItemFor(cyc.id, m.id));
+    if(!items.length) return;
+    let block = document.createElement('div');
+    block.className = 'cat-block ' + catClass[cat];
+    block.innerHTML = `<div class="cat-title">${cat} <span class="ta">${catTa[cat]}</span></div>`;
+    items.forEach(m=>{
+      let ci = cycleItemFor(cyc.id, m.id);
+      let min = ci.minOverride ?? m.min, max = ci.maxOverride ?? m.max;
+      let qty = session.cart[m.id] || 0;
+      let row = document.createElement('div');
+      row.className = 'item-row';
+      row.innerHTML = `
+        <div class="item-thumb">${m.icon}</div>
+        <div class="item-main">
+          <div class="item-name">${m.nameEn}<span class="ta">${m.nameTa}</span></div>
+          <div class="item-meta">Unit: <b>${m.unit}</b> &nbsp;·&nbsp; Range ${min}–${max} ${m.unit}
+            ${devShowPrices ? ` &nbsp;·&nbsp; <span class="item-price">${fmtMoney(ci.price)}/${m.unit}</span>` : ''}
+          </div>
+          ${ci.soldOut ? '<div class="soldout">SOLD OUT for this cycle</div>' : `
+          <div class="qty-row">
+            ${m.presets.map(p=>`<button class="preset-btn ${qty===p?'active':''}" onclick="setQty('${m.id}', ${p})">${p} ${m.unit}</button>`).join('')}
+            <div class="free-wrap">
+              <input class="free-input" type="number" step="any" value="${qty && !m.presets.includes(qty)?qty:''}" placeholder="Other" onchange="setQtyFree('${m.id}', this)">
+              <span class="unit-tag">${m.unit}</span>
+            </div>
+          </div>
+          <div class="field-err" id="err-${m.id}"></div>
+          ${devShowPrices && qty ? `<div class="line-total">${fmtQty(qty)} ${m.unit} × ${fmtMoney(ci.price)} = ${fmtMoney(qty*ci.price)}</div>` : ''}
+          `}
+        </div>`;
+      block.appendChild(row);
+    });
+    wrap.appendChild(block);
+  });
+
+  // delivery mode
+  setDeliveryMode(session.deliveryMode || cust.deliveryMode, true);
+  document.getElementById('orderNote').value = session.note || '';
+  document.getElementById('orderNote').oninput = function(){ session.note = this.value; };
+
+  updateCartBar();
+}
+
+function setQty(itemId, val){
+  session.cart[itemId] = val;
+  validateAndRender(itemId);
+}
+function setQtyFree(itemId, inputEl){
+  let v = parseFloat(inputEl.value);
+  if(isNaN(v) || v<=0){ delete session.cart[itemId]; renderOrderingScreen(); return; }
+  session.cart[itemId] = v;
+  validateAndRender(itemId);
+}
+function validateAndRender(itemId){
+  let m = itemById(itemId);
+  let ci = cycleItemFor(session.cycle.id, itemId);
+  let min = ci.minOverride ?? m.min, max = ci.maxOverride ?? m.max;
+  let v = session.cart[itemId];
+  let errEl;
+  renderOrderingScreen();
+  errEl = document.getElementById('err-'+itemId);
+  if(v < min || v > max){
+    errEl.style.display='block';
+    errEl.textContent = `${m.nameEn} is sold in ${m.unit}. Please enter between ${min} and ${max} ${m.unit}.`;
+  }
+  updateCartBar();
+}
+function cartIsValid(){
+  for(let itemId in session.cart){
+    let m = itemById(itemId);
+    let ci = cycleItemFor(session.cycle.id, itemId);
+    if(!ci) continue;
+    let min = ci.minOverride ?? m.min, max = ci.maxOverride ?? m.max;
+    let v = session.cart[itemId];
+    if(v < min || v > max) return false;
+  }
+  return true;
+}
+
+function setDeliveryMode(mode, silent){
+  session.deliveryMode = mode;
+  document.getElementById('modeDoor').classList.toggle('active', mode==='Door Delivery');
+  document.getElementById('modePickup').classList.toggle('active', mode==='Customer Pickup');
+  let detail = document.getElementById('deliveryDetail');
+  if(mode==='Door Delivery'){
+    detail.innerHTML = `Delivering to: <b>${session.address || session.customer.address}</b> <button class="small-btn" onclick="editAddress()">Edit</button>`;
+  } else {
+    detail.innerHTML = `Pickup at: <b>${session.branch.pickup}</b> · Timing: ${session.branch.pickupTiming}`;
+  }
+}
+function editAddress(){
+  let a = prompt('Delivery address for this order:', session.address || session.customer.address);
+  if(a!==null){ session.address = a; setDeliveryMode('Door Delivery'); }
+}
+
+function updateCartBar(){
+  let count = Object.keys(session.cart).filter(k=>session.cart[k]>0).length;
+  let total = 0;
+  for(let itemId in session.cart){
+    let ci = cycleItemFor(session.cycle.id, itemId);
+    if(ci) total += session.cart[itemId]*ci.price;
+  }
+  document.getElementById('cartbarCount').textContent = count + ' item' + (count===1?'':'s') + ' selected';
+  document.getElementById('cartbarTotal').textContent = devShowPrices ? 'Tentative total: ' + fmtMoney(total) : '';
+  document.getElementById('cartbar').classList.toggle('hidden', count===0);
+}
+
+function repeatLastOrder(){
+  let cust = session.customer, cyc = session.cycle;
+  let prevOrder = orders.filter(o=>o.customerId===cust.id && o.cycleId!==cyc.id).sort((a,b)=> (a.createdAt<b.createdAt?1:-1))[0];
+  if(!prevOrder) return;
+  let dropped = [];
+  session.cart = {};
+  prevOrder.lines.forEach(l=>{
+    let ci = cycleItemFor(cyc.id, l.itemId);
+    let m = itemById(l.itemId);
+    if(!ci || ci.soldOut){
+      dropped.push(m.nameEn + ' (' + m.nameTa + ')');
+      return;
+    }
+    let min = ci.minOverride ?? m.min, max = ci.maxOverride ?? m.max;
+    let qty = Math.min(Math.max(l.qty, min), max);
+    session.cart[l.itemId] = qty;
+  });
+  let notice = document.getElementById('repeatDroppedNotice');
+  if(dropped.length){
+    notice.innerHTML = `<div class="notice">Not available this cycle, removed from cart: <b>${dropped.join(', ')}</b></div>`;
+  } else { notice.innerHTML=''; }
+  renderOrderingScreen();
+}
+
+/* cart sheet */
+function openCartSheet(){
+  let overlay = document.createElement('div');
+  overlay.className = 'overlay'; overlay.id='cartOverlay';
+  let lines = Object.keys(session.cart).filter(k=>session.cart[k]>0).map(itemId=>{
+    let m = itemById(itemId), ci = cycleItemFor(session.cycle.id, itemId), qty = session.cart[itemId];
+    return `<div class="cart-line">
+      <div><b>${m.nameEn}</b> <span class="muted ta">${m.nameTa}</span><div class="muted">${fmtQty(qty)} ${m.unit}${devShowPrices? ' × '+fmtMoney(ci.price):''}</div></div>
+      <div style="text-align:right;">${devShowPrices?`<div><b>${fmtMoney(qty*ci.price)}</b></div>`:''}<button class="rm" onclick="removeLine('${itemId}')">Remove</button></div>
+    </div>`;
+  }).join('');
+  let total = 0;
+  Object.keys(session.cart).forEach(itemId=>{ let ci=cycleItemFor(session.cycle.id,itemId); if(ci) total += session.cart[itemId]*ci.price; });
+  overlay.innerHTML = `<div class="sheet">
+    <div class="sheet-head"><h3 style="margin:0;">Your Cart</h3><button class="small-btn" onclick="closeCartSheet()">Close</button></div>
+    ${lines || '<p class="muted">Your cart is empty.</p>'}
+    ${devShowPrices ? `<div class="cart-total-row"><span>Tentative total</span><span>${fmtMoney(total)}</span></div>
+    <div class="notice">This is a tentative amount. The final bill may vary slightly based on actual weight, farm pricing and transport charges.</div>` : ''}
+    <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="closeCartSheet(); submitOrder();">Place Order</button>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+function closeCartSheet(){ let o=document.getElementById('cartOverlay'); if(o) o.remove(); }
+function removeLine(itemId){ delete session.cart[itemId]; closeCartSheet(); renderOrderingScreen(); }
+
+function submitOrder(){
+  if(!cartIsValid()){ alert('Please fix the highlighted quantity errors before placing your order.'); return; }
+  let items = Object.keys(session.cart).filter(k=>session.cart[k]>0);
+  if(!items.length){ alert('Please add at least one item.'); return; }
+  let lines = items.map(itemId=>{
+    let m = itemById(itemId), ci = cycleItemFor(session.cycle.id, itemId);
+    return {itemId, qty:session.cart[itemId], unit:m.unit, rate:ci.price, lineTotal: session.cart[itemId]*ci.price};
+  });
+  let total = lines.reduce((s,l)=>s+l.lineTotal,0);
+
+  if(session.order){
+    // editing existing order
+    session.order.lines = lines;
+    session.order.total = total;
+    session.order.deliveryMode = session.deliveryMode;
+    session.order.address = session.address;
+    session.order.notes = session.note;
+  } else {
+    let orderNo = 'FNK-' + (orderSeq++);
+    session.order = {id:'O'+Date.now(), orderNo, customerId:session.customer.id, cycleId:session.cycle.id,
+      deliveryMode:session.deliveryMode, address:session.address, notes:session.note, status:'Submitted',
+      nonCollection:false, adminEntered:false, lines, total, createdAt: nowStr()};
+    orders.push(session.order);
+  }
+  renderConfirmScreen();
+  goTo('confirm');
+}
+
+function renderConfirmScreen(){
+  document.getElementById('confirmOrderNo').textContent = session.order.orderNo;
+  document.getElementById('confirmDelDate').textContent = fmtDate(session.cycle.deliveryDate);
+  document.getElementById('confirmSummary').innerHTML = summaryHtml(session.order);
+}
+function viewSubmittedOrder(){ renderOrderingScreen(); goTo('order'); }
+
+function renderLockedScreen(){
+  let ord = session.order || orders.find(o=>o.customerId===session.customer.id && o.cycleId===session.cycle.id);
+  document.getElementById('lockedOrderNo').textContent = ord ? ord.orderNo : '—';
+  document.getElementById('lockedSupportNo').textContent = session.branch.support;
+  document.getElementById('lockedSummary').innerHTML = ord ? summaryHtml(ord) : '<p class="muted">No order was placed this cycle.</p>';
+}
+function summaryHtml(order){
+  return '<div class="card">' + order.lines.map(l=>{
+    let m = itemById(l.itemId);
+    return `<div class="cart-line" style="background:var(--cream);"><div><b>${m.nameEn}</b> <span class="ta muted">${m.nameTa}</span><div class="muted">${fmtQty(l.qty)} ${l.unit}</div></div>${devShowPrices?`<div><b>${fmtMoney(l.lineTotal)}</b></div>`:''}</div>`;
+  }).join('') + (devShowPrices?`<div class="cart-total-row"><span>Total</span><span>${fmtMoney(order.lines.reduce((s,l)=>s+l.lineTotal,0))}</span></div>`:'') + '</div>';
+}
+
+function fmtDate(iso){
+  let d = new Date(iso+'T00:00:00');
+  return d.toLocaleDateString('en-IN', {weekday:'short', day:'2-digit', month:'short', year:'numeric'});
+}
+function nowStr(){
+  let d = new Date();
+  return d.toISOString().slice(0,16).replace('T',' ');
+}
+
+/* ============================================================
+   ADMIN APP
+   ============================================================ */
+let adminState = { role:'super', branchId:'B1', view:'dashboard' };
+
+function initAdminSelectors(){
+  let bsel = document.getElementById('adminBranchSel');
+  bsel.innerHTML = branches.map(b=>`<option value="${b.id}">${b.name}</option>`).join('');
+  bsel.value = adminState.branchId;
+  bsel.onchange = ()=>{ adminState.branchId = bsel.value; renderAdmin(); };
+  document.getElementById('adminRoleSel').onchange = function(){
+    adminState.role = this.value;
+    document.getElementById('roleTag').textContent = this.value==='super' ? 'Super Admin' : 'Branch Admin';
+    document.querySelectorAll('.super-only').forEach(el=> el.style.display = this.value==='super' ? '' : 'none');
+    if(this.value==='branch' && adminState.view==='branches') { adminState.view='dashboard'; }
+    if(this.value==='branch' && adminState.view==='audit') { adminState.view='dashboard'; }
+    renderAdmin();
+  };
+}
+document.querySelectorAll('.anavitem').forEach(el=>{
+  el.addEventListener('click', ()=>{
+    document.querySelectorAll('.anavitem').forEach(x=>x.classList.remove('active'));
+    el.classList.add('active');
+    adminState.view = el.dataset.view;
+    renderAdmin();
+  });
+});
+
+function branchScopedList(){
+  return adminState.role==='super' ? branches : branches.filter(b=>b.id===adminState.branchId);
+}
+function currentBranchIds(){
+  return adminState.role==='super' ? branches.map(b=>b.id) : [adminState.branchId];
+}
+
+function renderAdmin(){
+  let titles = {dashboard:'Dashboard', cycles:'Cycle Management', availability:'Cycle Availability', orders:'Orders',
+    farmorder:'Farm Order (Procurement)', ordersheets:'Order Sheets', noncollection:'Non-collection Tracking',
+    customers:'Customers', masteritems:'Master Item List', branches:'Branches', reports:'Reports', audit:'Audit Log'};
+  document.getElementById('adminTitle').textContent = titles[adminState.view] || 'Dashboard';
+  document.getElementById('adminTopExtras').innerHTML = `<span class="muted" style="font-size:12px;">${adminState.role==='super'?'All branches':branchById(adminState.branchId).name}</span>`;
+  let fn = {
+    dashboard: renderDashboard, cycles: renderCycles, availability: renderAvailability, orders: renderOrders,
+    farmorder: renderFarmOrder, ordersheets: renderOrderSheets, noncollection: renderNonCollection,
+    customers: renderCustomers, masteritems: renderMasterItems, branches: renderBranches, reports: renderReports, audit: renderAudit
+  }[adminState.view];
+  document.getElementById('adminBody').innerHTML = '';
+  if(fn) fn();
+}
+
+function openCycleForBranch(branchId){ return cycles.find(c=>c.branchId===branchId && c.status==='Open'); }
+
+function renderDashboard(){
+  let body = document.getElementById('adminBody');
+  let ids = currentBranchIds();
+  let openCycles = cycles.filter(c=>ids.includes(c.branchId) && c.status==='Open');
+  let html = '';
+  if(!openCycles.length){
+    html += `<div class="alertbox"><b>No open cycle</b>${adminState.role==='branch'?'Open a cycle to start accepting orders.':'None of your branches currently have an open cycle.'}</div>`;
+  }
+  openCycles.forEach(cyc=>{
+    let branch = branchById(cyc.branchId);
+    let cycOrders = orders.filter(o=>o.cycleId===cyc.id);
+    let custIds = new Set(cycOrders.map(o=>o.customerId));
+    let branchCustomers = customers.filter(c=>c.branchId===cyc.branchId && c.active);
+    let notOrdered = branchCustomers.filter(c=>!custIds.has(c.id));
+    let totalQty = cycOrders.reduce((s,o)=>s+o.lines.reduce((s2,l)=>s2+l.qty,0),0);
+    let totalVal = cycOrders.reduce((s,o)=>s+o.lines.reduce((s2,l)=>s2+l.lineTotal,0),0);
+    let flagged = branchCustomers.filter(c=>c.nonCollectionCount>0);
+
+    html += `<div class="panel">
+      <h3>${branch.name} — Cycle #${cyc.cycleNo} <span class="tag open">OPEN</span> <span class="muted" style="font-weight:400;font-size:12px;">closes ${cyc.closeAt}</span></h3>
+      ${flagged.length? `<div class="alertbox"><b>Outstanding non-collection flags</b>${flagged.map(c=>c.name+' ('+c.mobile+', '+c.nonCollectionCount+'x)').join(', ')} — review before allowing further orders.</div>`:''}
+      <div class="kpi-grid">
+        <div class="kpi"><div class="n">${custIds.size}</div><div class="l">Customers ordered</div></div>
+        <div class="kpi"><div class="n">${cycOrders.length}</div><div class="l">Total orders</div></div>
+        <div class="kpi"><div class="n">${fmtQty(totalQty)}</div><div class="l">Total qty (mixed units)</div></div>
+        <div class="kpi"><div class="n">${fmtMoney(totalVal)}</div><div class="l">Tentative value</div></div>
+        <div class="kpi"><div class="n">${notOrdered.length}</div><div class="l">Not yet ordered</div></div>
+      </div>
+      <h3 style="margin-top:4px;">Not Yet Ordered — ${branch.name}</h3>
+      <div class="flexrow" style="margin-bottom:8px;"><button class="small-btn" onclick="exportCsv(${JSON.stringify(notOrdered.map(c=>({Name:c.name,Mobile:c.mobile,Area:c.area})))}, 'not-yet-ordered-${branch.id}.csv')">⬇ Export Excel (CSV)</button></div>
+      <table><thead><tr><th>Name</th><th>Mobile</th><th>Area</th><th>Call</th></tr></thead><tbody>
+      ${notOrdered.map(c=>`<tr><td>${c.name}</td><td>${c.mobile}</td><td>${c.area||'—'}</td><td><a class="small-btn" href="tel:${c.mobile}">📞 Call</a></td></tr>`).join('') || '<tr><td colspan="4" class="muted">Everyone has ordered.</td></tr>'}
+      </tbody></table>
+    </div>`;
+  });
+  body.innerHTML = html;
+}
+
+function renderCycles(){
+  let body = document.getElementById('adminBody');
+  let ids = currentBranchIds();
+  let list = cycles.filter(c=>ids.includes(c.branchId)).sort((a,b)=> b.cycleNo-a.cycleNo);
+  let html = `<div class="panel"><h3>Cycles</h3>
+    <table><thead><tr><th>Branch</th><th>Cycle #</th><th>Opens</th><th>Closes</th><th>Delivery</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+    ${list.map(c=>{
+      let b = branchById(c.branchId);
+      let tagClass = c.status==='Open'?'open':c.status==='Closed'?'closed':c.status==='Delivered'?'delivered':'draft';
+      return `<tr>
+        <td>${b.name}</td><td>#${c.cycleNo}</td><td>${c.openAt}</td>
+        <td><input class="inline-input" style="width:150px" value="${c.closeAt}" onchange="updateCycleClose('${c.id}', this.value)"></td>
+        <td>${fmtDate(c.deliveryDate)}</td>
+        <td><span class="tag ${tagClass}">${c.status}</span></td>
+        <td class="flexrow">
+          ${c.status==='Open' ? `<button class="small-btn danger" onclick="toggleCycleStatus('${c.id}','Closed')">Close now</button>`
+            : c.status==='Draft' ? `<button class="small-btn primary" onclick="toggleCycleStatus('${c.id}','Open')">Open</button>`
+            : c.status==='Closed' ? `<button class="small-btn primary" onclick="toggleCycleStatus('${c.id}','Open')">Reopen</button><button class="small-btn" onclick="toggleCycleStatus('${c.id}','Delivered')">Mark delivered</button>`
+            : `<span class="muted">Archived</span>`}
+        </td>
+      </tr>`;
+    }).join('')}
+    </tbody></table></div>
+    <div class="panel"><h3>Create new cycle</h3>
+      <div class="grid3">
+        <div class="field">Branch <select class="asel" id="newCycBranch">${branchScopedList().map(b=>`<option value="${b.id}">${b.name}</option>`).join('')}</select></div>
+        <div class="field">Order window opens <input class="inline-input" id="newCycOpen" placeholder="YYYY-MM-DD HH:MM"></div>
+        <div class="field">Order window closes <input class="inline-input" id="newCycClose" placeholder="YYYY-MM-DD HH:MM"></div>
+        <div class="field">Expected delivery date <input class="inline-input" id="newCycDeliv" placeholder="YYYY-MM-DD"></div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:12px;" onclick="createCycle()">Create cycle (Draft)</button>
+    </div>`;
+  body.innerHTML = html;
+}
+function updateCycleClose(cycleId, val){ cycles.find(c=>c.id===cycleId).closeAt = val; }
+function toggleCycleStatus(cycleId, status){
+  let c = cycles.find(c=>c.id===cycleId);
+  c.status = status;
+  auditLog.unshift({user:adminState.role+'.admin', action:'Cycle status change', entity: 'Cycle '+cycleId, before:'—', after:status, ts:nowStr()});
+  renderCycles();
+}
+function createCycle(){
+  let branchId = document.getElementById('newCycBranch').value;
+  let openAt = document.getElementById('newCycOpen').value || nowStr();
+  let closeAt = document.getElementById('newCycClose').value || nowStr();
+  let deliv = document.getElementById('newCycDeliv').value || '2026-08-19';
+  let existing = cycles.filter(c=>c.branchId===branchId);
+  let cycleNo = existing.length ? Math.max(...existing.map(c=>c.cycleNo))+1 : 1;
+  cycles.push({id:'C'+Date.now(), branchId, cycleNo, openAt, closeAt, deliveryDate:deliv, status:'Draft'});
+  renderCycles();
+}
+
+function renderAvailability(){
+  let body = document.getElementById('adminBody');
+  let ids = currentBranchIds();
+  let openCycles = cycles.filter(c=>ids.includes(c.branchId));
+  let cyc = openCycles.find(c=>c.status==='Open') || openCycles[0];
+  if(!cyc){ body.innerHTML = '<div class="panel">No cycles for this branch yet.</div>'; return; }
+  let selHtml = `<select class="asel" id="availCycSel">${openCycles.sort((a,b)=>b.cycleNo-a.cycleNo).map(c=>`<option value="${c.id}" ${c.id===cyc.id?'selected':''}>${branchById(c.branchId).name} — Cycle #${c.cycleNo} (${c.status})</option>`).join('')}</select>`;
+  let html = `<div class="panel"><h3>Editing availability for</h3>${selHtml}
+    <div class="flexrow" style="margin-top:10px;">
+      <button class="small-btn" onclick="copyPrevCycle('${cyc.id}')">📋 Copy previous cycle's list</button>
+    </div>
+    <table style="margin-top:12px;"><thead><tr><th>Item</th><th>Category</th><th>Price / unit</th><th>Max qty</th><th>Min–Max override</th><th>Sold out</th><th></th></tr></thead><tbody id="availBody"></tbody></table>
+    <h4 style="margin:16px 0 6px;">Add item from master list</h4>
+    <div class="flexrow"><select class="asel" id="availAddSel">${masterItems.filter(m=>!cycleItemFor(cyc.id,m.id)).map(m=>`<option value="${m.id}">${m.nameEn} / ${m.nameTa}</option>`).join('')}</select>
+    <button class="small-btn primary" onclick="addAvailItem('${cyc.id}')">+ Add to cycle</button></div>
+    </div>`;
+  body.innerHTML = html;
+  document.getElementById('availCycSel').onchange = function(){ let c=cycles.find(c=>c.id===this.value); renderAvailabilityFor(c); };
+  renderAvailabilityFor(cyc);
+}
+function renderAvailabilityFor(cyc){
+  let tbody = document.getElementById('availBody');
+  let rows = cycleItems.filter(ci=>ci.cycleId===cyc.id);
+  tbody.innerHTML = rows.map(ci=>{
+    let m = itemById(ci.itemId);
+    return `<tr>
+      <td>${m.nameEn} <span class="ta muted">${m.nameTa}</span></td>
+      <td>${m.category}</td>
+      <td><input class="inline-input" style="width:80px" type="number" value="${ci.price}" onchange="ci_price('${cyc.id}','${ci.itemId}',this.value)"></td>
+      <td><input class="inline-input" style="width:80px" type="number" value="${ci.maxQty||''}" onchange="ci_maxqty('${cyc.id}','${ci.itemId}',this.value)"></td>
+      <td><input class="inline-input" style="width:50px" type="number" value="${ci.minOverride??m.min}" onchange="ci_min('${cyc.id}','${ci.itemId}',this.value)"> – <input class="inline-input" style="width:50px" type="number" value="${ci.maxOverride??m.max}" onchange="ci_max('${cyc.id}','${ci.itemId}',this.value)"></td>
+      <td><input type="checkbox" ${ci.soldOut?'checked':''} onchange="ci_soldout('${cyc.id}','${ci.itemId}',this.checked)"></td>
+      <td><button class="small-btn danger" onclick="removeAvailItem('${cyc.id}','${ci.itemId}')">Remove</button></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" class="muted">No items in this cycle yet.</td></tr>';
+}
+function ci_price(cycleId,itemId,v){ cycleItemFor(cycleId,itemId).price = parseFloat(v)||0; }
+function ci_maxqty(cycleId,itemId,v){ cycleItemFor(cycleId,itemId).maxQty = parseFloat(v)||0; }
+function ci_min(cycleId,itemId,v){ cycleItemFor(cycleId,itemId).minOverride = parseFloat(v); }
+function ci_max(cycleId,itemId,v){ cycleItemFor(cycleId,itemId).maxOverride = parseFloat(v); }
+function ci_soldout(cycleId,itemId,v){ cycleItemFor(cycleId,itemId).soldOut = v; }
+function removeAvailItem(cycleId,itemId){
+  let affected = orders.filter(o=>o.cycleId===cycleId && o.lines.some(l=>l.itemId===itemId));
+  if(affected.length && !confirm(`${affected.length} existing order(s) include this item. Remove anyway?`)) return;
+  cycleItems = cycleItems.filter(ci=>!(ci.cycleId===cycleId && ci.itemId===itemId));
+  renderAvailability();
+}
+function addAvailItem(cycleId){
+  let itemId = document.getElementById('availAddSel').value;
+  if(!itemId) return;
+  cycleItems.push({cycleId, itemId, price:0, maxQty:50, soldOut:false});
+  renderAvailability();
+}
+function copyPrevCycle(cycleId){
+  let cyc = cycles.find(c=>c.id===cycleId);
+  let prev = cycles.filter(c=>c.branchId===cyc.branchId && c.cycleNo<cyc.cycleNo).sort((a,b)=>b.cycleNo-a.cycleNo)[0];
+  if(!prev){ alert('No previous cycle to copy from.'); return; }
+  let prevItems = cycleItems.filter(ci=>ci.cycleId===prev.id);
+  prevItems.forEach(pi=>{
+    if(!cycleItemFor(cycleId, pi.itemId)){
+      cycleItems.push({cycleId, itemId:pi.itemId, price:pi.price, maxQty:pi.maxQty, minOverride:pi.minOverride, maxOverride:pi.maxOverride, soldOut:false});
+    }
+  });
+  renderAvailability();
+}
+
+function renderOrders(){
+  let body = document.getElementById('adminBody');
+  let ids = currentBranchIds();
+  let cycOptions = cycles.filter(c=>ids.includes(c.branchId)).sort((a,b)=>b.cycleNo-a.cycleNo);
+  let html = `<div class="panel">
+    <div class="flexrow" style="margin-bottom:10px;">
+      <select class="asel" id="ordCycSel">${cycOptions.map(c=>`<option value="${c.id}">${branchById(c.branchId).name} — Cycle #${c.cycleNo} (${c.status})</option>`).join('')}</select>
+      <input class="inline-input" style="width:220px" id="ordSearch" placeholder="Search name / mobile / order#">
+    </div>
+    <table><thead><tr><th>Order#</th><th>Customer</th><th>Phone</th><th>Mode</th><th>Items</th><th>Value</th><th>Submitted</th><th>Status</th><th></th></tr></thead><tbody id="ordersBody"></tbody></table>
+  </div>`;
+  body.innerHTML = html;
+  document.getElementById('ordCycSel').onchange = ()=>renderOrdersTable();
+  document.getElementById('ordSearch').oninput = ()=>renderOrdersTable();
+  renderOrdersTable();
+}
+function renderOrdersTable(){
+  let cycleId = document.getElementById('ordCycSel').value;
+  let q = (document.getElementById('ordSearch').value||'').toLowerCase();
+  let rows = orders.filter(o=>o.cycleId===cycleId).filter(o=>{
+    let cust = customers.find(c=>c.id===o.customerId);
+    return !q || o.orderNo.toLowerCase().includes(q) || cust.name.toLowerCase().includes(q) || cust.mobile.includes(q);
+  });
+  document.getElementById('ordersBody').innerHTML = rows.map(o=>{
+    let cust = customers.find(c=>c.id===o.customerId);
+    let val = o.lines.reduce((s,l)=>s+l.lineTotal,0);
+    return `<tr>
+      <td>${o.orderNo}${o.adminEntered?' <span class="tag draft">phone-in</span>':''}</td>
+      <td>${cust.name}</td><td>${cust.mobile}</td><td>${o.deliveryMode}</td>
+      <td>${o.lines.length}</td><td>${fmtMoney(val)}</td><td>${o.createdAt}</td>
+      <td>${o.nonCollection?'<span class="tag closed">Non-collected</span>':`<span class="tag ${o.status==='Delivered'?'delivered':'open'}">${o.status}</span>`}</td>
+      <td><button class="small-btn" onclick="openOrderModal('${o.id}')">Open</button></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="9" class="muted">No orders found.</td></tr>';
+}
+function openOrderModal(orderId){
+  let o = orders.find(o=>o.id===orderId);
+  let cust = customers.find(c=>c.id===o.customerId);
+  let bg = document.createElement('div'); bg.className='modal-bg'; bg.id='orderModalBg';
+  bg.innerHTML = `<div class="modal">
+    <button class="close-x" onclick="document.getElementById('orderModalBg').remove()">✕</button>
+    <h3>${o.orderNo} — ${cust.name}</h3>
+    <p class="muted">${cust.mobile} · ${o.deliveryMode} · Submitted ${o.createdAt}</p>
+    <table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Total</th><th></th></tr></thead><tbody id="modalLines"></tbody></table>
+    <div class="flexrow" style="margin-top:10px;">
+      <select class="asel" id="modalAddItem">${masterItems.filter(m=>cycleItemFor(o.cycleId,m.id) && !o.lines.some(l=>l.itemId===m.id)).map(m=>`<option value="${m.id}">${m.nameEn}</option>`).join('')}</select>
+      <button class="small-btn" onclick="modalAddLine('${o.id}')">+ Add item</button>
+    </div>
+    <div class="flexrow" style="margin-top:14px;">
+      <button class="small-btn danger" onclick="cancelOrder('${o.id}')">Cancel order</button>
+      <label style="display:flex;gap:6px;align-items:center;font-size:12.5px;"><input type="checkbox" id="modalNC" ${o.nonCollection?'checked':''}> Non-collection</label>
+      <button class="small-btn primary" onclick="saveOrderModal('${o.id}')">Save changes</button>
+    </div>
+  </div>`;
+  document.body.appendChild(bg);
+  renderModalLines(o);
+}
+function renderModalLines(o){
+  document.getElementById('modalLines').innerHTML = o.lines.map((l,i)=>{
+    let m = itemById(l.itemId);
+    return `<tr><td>${m.nameEn}</td><td><input class="inline-input" style="width:70px" type="number" value="${l.qty}" onchange="modalQty('${o.id}',${i},this.value)"></td><td>${fmtMoney(l.rate)}</td><td>${fmtMoney(l.qty*l.rate)}</td><td><button class="small-btn danger" onclick="modalRemoveLine('${o.id}',${i})">✕</button></td></tr>`;
+  }).join('');
+}
+function modalQty(orderId,i,v){ let o=orders.find(o=>o.id===orderId); let before=o.lines[i].qty; o.lines[i].qty=parseFloat(v)||0; o.lines[i].lineTotal=o.lines[i].qty*o.lines[i].rate; auditLog.unshift({user:'admin', action:'Edited order qty', entity:o.orderNo, before:before+' '+o.lines[i].unit, after:o.lines[i].qty+' '+o.lines[i].unit, ts:nowStr()}); }
+function modalRemoveLine(orderId,i){ let o=orders.find(o=>o.id===orderId); o.lines.splice(i,1); renderModalLines(o); }
+function modalAddLine(orderId){
+  let o = orders.find(o=>o.id===orderId);
+  let itemId = document.getElementById('modalAddItem').value;
+  if(!itemId) return;
+  let m = itemById(itemId), ci = cycleItemFor(o.cycleId, itemId);
+  o.lines.push({itemId, qty:ci.minOverride??m.min, unit:m.unit, rate:ci.price, lineTotal:(ci.minOverride??m.min)*ci.price});
+  document.getElementById('orderModalBg').remove();
+  openOrderModal(orderId);
+}
+function saveOrderModal(orderId){
+  let o = orders.find(o=>o.id===orderId);
+  o.nonCollection = document.getElementById('modalNC').checked;
+  if(o.nonCollection){
+    let cust = customers.find(c=>c.id===o.customerId);
+    cust.nonCollectionCount = (cust.nonCollectionCount||0)+1;
+  }
+  document.getElementById('orderModalBg').remove();
+  renderAdmin();
+}
+function cancelOrder(orderId){
+  let reason = prompt('Reason for cancelling this order:');
+  if(reason===null) return;
+  let o = orders.find(o=>o.id===orderId);
+  o.status = 'Cancelled';
+  auditLog.unshift({user:'admin', action:'Cancelled order', entity:o.orderNo, before:'Submitted', after:'Cancelled: '+reason, ts:nowStr()});
+  document.getElementById('orderModalBg').remove();
+  renderAdmin();
+}
+
+function renderFarmOrder(){
+  let body = document.getElementById('adminBody');
+  let ids = currentBranchIds();
+  let cycOptions = cycles.filter(c=>ids.includes(c.branchId)).sort((a,b)=>b.cycleNo-a.cycleNo);
+  body.innerHTML = `<div class="panel">
+    <div class="flexrow"><select class="asel" id="farmCycSel">${cycOptions.map(c=>`<option value="${c.id}">${branchById(c.branchId).name} — Cycle #${c.cycleNo}</option>`).join('')}</select>
+      <button class="small-btn" onclick="exportFarmCsv()">⬇ Export Excel (CSV)</button>
+      <button class="small-btn maroon" onclick="printFarmOrder()">🖨 Export PDF / Print</button>
+    </div>
+    <table style="margin-top:12px;"><thead><tr><th>Category</th><th>Item</th><th>Total Qty</th><th>Unit</th></tr></thead><tbody id="farmBody"></tbody></table>
+  </div>`;
+  document.getElementById('farmCycSel').onchange = renderFarmTable;
+  renderFarmTable();
+}
+function farmAgg(){
+  let cycleId = document.getElementById('farmCycSel').value;
+  let agg = {};
+  orders.filter(o=>o.cycleId===cycleId && o.status!=='Cancelled').forEach(o=>{
+    o.lines.forEach(l=>{
+      agg[l.itemId] = (agg[l.itemId]||0)+l.qty;
+    });
+  });
+  return categories.flatMap(cat=>
+    Object.keys(agg).map(id=>itemById(id)).filter(m=>m.category===cat).map(m=>({cat, item:m, qty:agg[m.id]}))
+  );
+}
+function renderFarmTable(){
+  let rows = farmAgg();
+  document.getElementById('farmBody').innerHTML = rows.map(r=>`<tr><td>${r.cat}</td><td>${r.item.nameEn} <span class="ta muted">${r.item.nameTa}</span></td><td>${fmtQty(r.qty)}</td><td>${r.item.unit}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">No orders yet this cycle.</td></tr>';
+}
+function exportFarmCsv(){
+  let rows = farmAgg();
+  exportCsv(rows.map(r=>({Category:r.cat, Item_English:r.item.nameEn, Item_Tamil:r.item.nameTa, Total_Qty:fmtQty(r.qty), Unit:r.item.unit})), 'farm-order.csv');
+}
+function printFarmOrder(){
+  let rows = farmAgg();
+  let cycleId = document.getElementById('farmCycSel').value;
+  let cyc = cycles.find(c=>c.id===cycleId);
+  let html = `<h2>Farm Order — ${branchById(cyc.branchId).name} Cycle #${cyc.cycleNo}</h2>
+    <table border="1" cellpadding="6" style="border-collapse:collapse;width:100%;">
+    <tr><th>Category</th><th>Item</th><th>Total Qty</th><th>Unit</th></tr>
+    ${rows.map(r=>`<tr><td>${r.cat}</td><td>${r.item.nameEn} / ${r.item.nameTa}</td><td>${fmtQty(r.qty)}</td><td>${r.item.unit}</td></tr>`).join('')}
+    </table>`;
+  doPrint(html);
+}
+
+function renderOrderSheets(){
+  let body = document.getElementById('adminBody');
+  let ids = currentBranchIds();
+  let cycOptions = cycles.filter(c=>ids.includes(c.branchId)).sort((a,b)=>b.cycleNo-a.cycleNo);
+  body.innerHTML = `<div class="panel">
+    <div class="flexrow"><select class="asel" id="sheetCycSel">${cycOptions.map(c=>`<option value="${c.id}">${branchById(c.branchId).name} — Cycle #${c.cycleNo}</option>`).join('')}</select>
+      <button class="small-btn maroon" onclick="printAllSheets()">🖨 Print all Order Sheets</button>
+    </div>
+    <div id="sheetList" style="margin-top:12px;"></div>
+  </div>`;
+  document.getElementById('sheetCycSel').onchange = renderSheetList;
+  renderSheetList();
+}
+function renderSheetList(){
+  let cycleId = document.getElementById('sheetCycSel').value;
+  let rows = orders.filter(o=>o.cycleId===cycleId && o.status!=='Cancelled');
+  document.getElementById('sheetList').innerHTML = rows.map(o=>{
+    let cust = customers.find(c=>c.id===o.customerId);
+    return `<div class="sheet-card"><div class="flexrow" style="justify-content:space-between;">
+      <div><b>${o.orderNo}</b> — ${cust.name} (${cust.mobile})<div class="muted" style="font-size:12px;">${o.deliveryMode}${o.deliveryMode==='Door Delivery'?' · '+o.address:''}</div></div>
+      <button class="small-btn" onclick="printOneSheet('${o.id}')">🖨 Print</button></div></div>`;
+  }).join('') || '<p class="muted">No orders this cycle.</p>';
+}
+function sheetHtml(o){
+  let cust = customers.find(c=>c.id===o.customerId);
+  let cyc = cycles.find(c=>c.id===o.cycleId);
+  return `<div class="sheet-card">
+    <h4>Order Sheet — ${o.orderNo}</h4>
+    <p><b>${cust.name}</b> · ${cust.mobile} · ${branchById(cyc.branchId).name}<br>
+    Delivery: ${o.deliveryMode}${o.deliveryMode==='Door Delivery' ? ' — '+ o.address : ''}<br>
+    Date ordered: ${o.createdAt} &nbsp; Delivery date: ${fmtDate(cyc.deliveryDate)}</p>
+    <table border="1" cellpadding="5" style="border-collapse:collapse;width:100%;">
+    <tr><th>Item (EN)</th><th>Item (TA)</th><th>Qty</th><th>Unit</th></tr>
+    ${o.lines.map(l=>{let m=itemById(l.itemId); return `<tr><td>${m.nameEn}</td><td>${m.nameTa}</td><td>${fmtQty(l.qty)}</td><td>${l.unit}</td></tr>`}).join('')}
+    </table>
+    ${o.notes?`<p><i>Note: ${o.notes}</i></p>`:''}
+  </div>`;
+}
+function printOneSheet(orderId){ doPrint(sheetHtml(orders.find(o=>o.id===orderId))); }
+function printAllSheets(){
+  let cycleId = document.getElementById('sheetCycSel').value;
+  let rows = orders.filter(o=>o.cycleId===cycleId && o.status!=='Cancelled');
+  doPrint(rows.map(sheetHtml).join(''));
+}
+function doPrint(html){
+  document.getElementById('printArea').innerHTML = html;
+  window.print();
+}
+
+function renderNonCollection(){
+  let body = document.getElementById('adminBody');
+  let ids = currentBranchIds();
+  let ncOrders = orders.filter(o=>ids.includes(customers.find(c=>c.id===o.customerId).branchId) && o.nonCollection);
+  let html = `<div class="panel"><h3>Flagged non-collections</h3>
+    <table><thead><tr><th>Order#</th><th>Customer</th><th>Mobile</th><th>Cycle</th><th>Total flags on customer</th></tr></thead><tbody>
+    ${ncOrders.map(o=>{ let cust=customers.find(c=>c.id===o.customerId); let cyc=cycles.find(c=>c.id===o.cycleId);
+      return `<tr><td>${o.orderNo}</td><td>${cust.name}</td><td>${cust.mobile}</td><td>#${cyc.cycleNo}</td><td>${cust.nonCollectionCount}</td></tr>`; }).join('') || '<tr><td colspan="5" class="muted">None flagged yet.</td></tr>'}
+    </tbody></table></div>
+    <div class="panel"><h3>Repeat defaulters (2+ flags)</h3>
+    <table><thead><tr><th>Customer</th><th>Mobile</th><th>Branch</th><th>Flags</th></tr></thead><tbody>
+    ${customers.filter(c=>ids.includes(c.branchId) && c.nonCollectionCount>=2).map(c=>`<tr><td>${c.name}</td><td>${c.mobile}</td><td>${branchById(c.branchId).name}</td><td>${c.nonCollectionCount}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">None.</td></tr>'}
+    </tbody></table></div>`;
+  body.innerHTML = html;
+}
+
+function renderCustomers(){
+  let body = document.getElementById('adminBody');
+  let ids = currentBranchIds();
+  let list = customers.filter(c=>ids.includes(c.branchId));
+  body.innerHTML = `<div class="panel"><h3>Customers</h3>
+  <div class="flexrow" style="margin-bottom:10px;"><button class="small-btn primary" onclick="openAddCustomer()">+ Add customer</button><button class="small-btn" onclick="alert('Mock: CSV upload would validate rows and show an error report for rejected rows.')">⬆ Bulk import CSV</button></div>
+  <table><thead><tr><th>Name</th><th>Mobile</th><th>Branch</th><th>Delivery mode</th><th>Non-collections</th><th>Status</th><th></th></tr></thead><tbody>
+  ${list.map(c=>`<tr><td>${c.name}</td><td>${c.mobile}</td><td>${branchById(c.branchId).name}</td><td>${c.deliveryMode}</td><td>${c.nonCollectionCount}</td>
+    <td>${c.active?'<span class="tag open">Active</span>':'<span class="tag closed">Inactive</span>'}</td>
+    <td><button class="small-btn" onclick="toggleCustomerActive('${c.id}')">${c.active?'Deactivate':'Reactivate'}</button></td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+function toggleCustomerActive(id){ let c=customers.find(c=>c.id===id); c.active=!c.active; renderCustomers(); }
+function openAddCustomer(){
+  let bg = document.createElement('div'); bg.className='modal-bg'; bg.id='custModalBg';
+  bg.innerHTML = `<div class="modal"><button class="close-x" onclick="document.getElementById('custModalBg').remove()">✕</button>
+    <h3>Add customer</h3>
+    <div class="grid2">
+      <div class="field">Full name <input class="inline-input" id="ncName"></div>
+      <div class="field">Mobile number <input class="inline-input" id="ncMobile"></div>
+      <div class="field">Branch <select class="asel" id="ncBranch">${branches.map(b=>`<option value="${b.id}">${b.name}</option>`).join('')}</select></div>
+      <div class="field">Default delivery <select class="asel" id="ncMode"><option>Door Delivery</option><option>Customer Pickup</option></select></div>
+      <div class="field">Address <input class="inline-input" id="ncAddress"></div>
+      <div class="field">Area / landmark <input class="inline-input" id="ncArea"></div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:14px;" onclick="saveNewCustomer()">Save customer</button>
+    </div>`;
+  document.body.appendChild(bg);
+}
+function saveNewCustomer(){
+  let mobile = document.getElementById('ncMobile').value.trim();
+  if(!mobile){ alert('Mobile number required.'); return; }
+  if(customers.some(c=>c.mobile===mobile)){ alert('This mobile number is already registered — showing existing record instead of creating a duplicate.'); document.getElementById('custModalBg').remove(); return; }
+  customers.push({id:'CU'+Date.now(), name:document.getElementById('ncName').value||'New Customer', mobile, altMobile:'',
+    branchId:document.getElementById('ncBranch').value, deliveryMode:document.getElementById('ncMode').value,
+    address:document.getElementById('ncAddress').value, area:document.getElementById('ncArea').value, active:true, nonCollectionCount:0});
+  document.getElementById('custModalBg').remove();
+  renderCustomers();
+}
+
+function renderMasterItems(){
+  let body = document.getElementById('adminBody');
+  body.innerHTML = `<div class="panel"><h3>Master Item List</h3>
+  <div class="flexrow" style="margin-bottom:10px;"><button class="small-btn primary" onclick="openAddItem()">+ Add item</button></div>
+  <table><thead><tr><th>Item (EN)</th><th>Item (TA)</th><th>Category</th><th>Unit</th><th>Min–Max</th><th>Active</th></tr></thead><tbody>
+  ${masterItems.map(m=>`<tr><td>${m.nameEn}</td><td class="ta">${m.nameTa}</td><td>${m.category}</td><td>${m.unit}</td><td>${m.min}–${m.max}</td>
+  <td><input type="checkbox" ${m.active?'checked':''} onchange="toggleItemActive('${m.id}', this.checked)"></td></tr>`).join('')}
+  </tbody></table></div>
+  <div class="panel"><h3>Categories</h3><div class="flexrow">${categories.map(c=>`<span class="tag open">${c}</span>`).join('')} <button class="small-btn" onclick="addCategory()">+ Add category</button></div></div>`;
+}
+function toggleItemActive(id,val){ itemById(id).active = val; }
+function addCategory(){
+  let name = prompt('New category name:');
+  if(name && !categories.includes(name)){ categories.push(name); catClass[name]='veg'; catTa[name]=''; renderMasterItems(); }
+}
+function openAddItem(){
+  let bg = document.createElement('div'); bg.className='modal-bg'; bg.id='itemModalBg';
+  bg.innerHTML = `<div class="modal"><button class="close-x" onclick="document.getElementById('itemModalBg').remove()">✕</button>
+    <h3>Add master item</h3>
+    <div class="grid2">
+      <div class="field">Name (English) <input class="inline-input" id="niEn"></div>
+      <div class="field">Name (Tamil) <input class="inline-input ta" id="niTa"></div>
+      <div class="field">Category <select class="asel" id="niCat">${categories.map(c=>`<option>${c}</option>`).join('')}</select></div>
+      <div class="field">Unit <select class="asel" id="niUnit"><option>Kg</option><option>Gram</option><option>Nos</option><option>Litre</option><option>Ml</option></select></div>
+      <div class="field">Minimum order qty <input class="inline-input" type="number" id="niMin" value="0.25"></div>
+      <div class="field">Maximum order qty <input class="inline-input" type="number" id="niMax" value="10"></div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:14px;" onclick="saveNewItem()">Save item</button>
+    </div>`;
+  document.body.appendChild(bg);
+}
+function saveNewItem(){
+  let en = document.getElementById('niEn').value.trim();
+  if(!en){ alert('English name required.'); return; }
+  masterItems.push({id:'I'+Date.now(), nameEn:en, nameTa:document.getElementById('niTa').value,
+    category:document.getElementById('niCat').value, unit:document.getElementById('niUnit').value,
+    presets:[1,2], min:parseFloat(document.getElementById('niMin').value)||0.25, max:parseFloat(document.getElementById('niMax').value)||10,
+    active:true, icon:'🥕'});
+  document.getElementById('itemModalBg').remove();
+  renderMasterItems();
+}
+
+function renderBranches(){
+  let body = document.getElementById('adminBody');
+  body.innerHTML = `<div class="panel"><h3>Branches</h3>
+  <table><thead><tr><th>Name</th><th>WhatsApp enquiry</th><th>Support number</th><th>Pickup point</th><th>Pickup timing</th></tr></thead><tbody>
+  ${branches.map(b=>`<tr><td>${b.name}</td>
+    <td><input class="inline-input" value="${b.whatsapp}" onchange="branchField('${b.id}','whatsapp',this.value)"></td>
+    <td><input class="inline-input" value="${b.support}" onchange="branchField('${b.id}','support',this.value)"></td>
+    <td><input class="inline-input" value="${b.pickup}" onchange="branchField('${b.id}','pickup',this.value)"></td>
+    <td><input class="inline-input" value="${b.pickupTiming}" onchange="branchField('${b.id}','pickupTiming',this.value)"></td>
+    </tr>`).join('')}
+  </tbody></table>
+  <button class="btn btn-primary" style="margin-top:12px;" onclick="addBranch()">+ Add branch</button>
+  </div>`;
+}
+function branchField(id,field,val){ branchById(id)[field]=val; }
+function addBranch(){
+  let name = prompt('New branch name:');
+  if(!name) return;
+  branches.push({id:'B'+Date.now(), name, address:'', whatsapp:'', support:'', pickup:'', pickupTiming:''});
+  renderBranches();
+}
+
+function renderReports(){
+  let body = document.getElementById('adminBody');
+  let ids = currentBranchIds();
+  let allOrders = orders.filter(o=>ids.includes(customers.find(c=>c.id===o.customerId).branchId) && o.status!=='Cancelled');
+
+  // customer value
+  let custAgg = {};
+  allOrders.forEach(o=>{
+    custAgg[o.customerId] = custAgg[o.customerId] || {orders:0, qty:0, val:0, last:o.createdAt};
+    let a = custAgg[o.customerId];
+    a.orders++; a.qty += o.lines.reduce((s,l)=>s+l.qty,0); a.val += o.lines.reduce((s,l)=>s+l.lineTotal,0);
+    if(o.createdAt > a.last) a.last = o.createdAt;
+  });
+  let custRows = Object.keys(custAgg).map(id=>{ let c=customers.find(c=>c.id===id); let a=custAgg[id]; return {name:c.name, mobile:c.mobile, orders:a.orders, qty:a.qty, val:a.val, avg:a.val/a.orders, last:a.last}; }).sort((a,b)=>b.val-a.val);
+
+  // item movement
+  let itemAgg = {};
+  allOrders.forEach(o=> o.lines.forEach(l=>{ itemAgg[l.itemId]=itemAgg[l.itemId]||{qty:0,val:0}; itemAgg[l.itemId].qty+=l.qty; itemAgg[l.itemId].val+=l.lineTotal; }));
+  let itemRows = Object.keys(itemAgg).map(id=>{ let m=itemById(id); return {name:m.nameEn, ta:m.nameTa, qty:itemAgg[id].qty, unit:m.unit, val:itemAgg[id].val}; }).sort((a,b)=>b.val-a.val);
+
+  // lapsed customers (no order in current open cycle)
+  let openCyc = cycles.filter(c=>ids.includes(c.branchId) && c.status==='Open');
+  let orderedIds = new Set(orders.filter(o=>openCyc.some(c=>c.id===o.cycleId)).map(o=>o.customerId));
+  let lapsed = customers.filter(c=>ids.includes(c.branchId) && c.active && !orderedIds.has(c.id));
+
+  // non-collection
+  let ncRows = customers.filter(c=>ids.includes(c.branchId) && c.nonCollectionCount>0);
+
+  body.innerHTML = `
+  <div class="panel"><h3>Customer Value Report <button class="small-btn" style="float:right" onclick='exportCsv(${JSON.stringify(custRows)}, "customer-value.csv")'>⬇ Excel</button></h3>
+  <table><thead><tr><th>Customer</th><th>Mobile</th><th>Orders</th><th>Qty</th><th>Total value</th><th>Avg order value</th><th>Last order</th></tr></thead><tbody>
+  ${custRows.map(r=>`<tr><td>${r.name}</td><td>${r.mobile}</td><td>${r.orders}</td><td>${fmtQty(r.qty)}</td><td>${fmtMoney(r.val)}</td><td>${fmtMoney(r.avg)}</td><td>${r.last}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">No data.</td></tr>'}
+  </tbody></table></div>
+
+  <div class="panel"><h3>Item Movement Report <button class="small-btn" style="float:right" onclick='exportCsv(${JSON.stringify(itemRows)}, "item-movement.csv")'>⬇ Excel</button></h3>
+  <table><thead><tr><th>Item</th><th>Qty sold</th><th>Unit</th><th>Value</th></tr></thead><tbody>
+  ${itemRows.map(r=>`<tr><td>${r.name} <span class="ta muted">${r.ta}</span></td><td>${fmtQty(r.qty)}</td><td>${r.unit}</td><td>${fmtMoney(r.val)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">No data.</td></tr>'}
+  </tbody></table></div>
+
+  <div class="panel"><h3>Lapsed Customers (no order this cycle)</h3>
+  <table><thead><tr><th>Name</th><th>Mobile</th><th>Branch</th></tr></thead><tbody>
+  ${lapsed.map(c=>`<tr><td>${c.name}</td><td>${c.mobile}</td><td>${branchById(c.branchId).name}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">None.</td></tr>'}
+  </tbody></table></div>
+
+  <div class="panel"><h3>Non-collection Report</h3>
+  <table><thead><tr><th>Name</th><th>Mobile</th><th>Branch</th><th>Flags</th></tr></thead><tbody>
+  ${ncRows.map(c=>`<tr><td>${c.name}</td><td>${c.mobile}</td><td>${branchById(c.branchId).name}</td><td>${c.nonCollectionCount}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">None.</td></tr>'}
+  </tbody></table></div>
+
+  ${adminState.role==='super' ? `<div class="panel"><h3>Branch Comparison</h3>
+  <table><thead><tr><th>Branch</th><th>Orders</th><th>Total qty</th><th>Total value</th></tr></thead><tbody>
+  ${branches.map(b=>{ let bo = orders.filter(o=>o.status!=='Cancelled' && customers.find(c=>c.id===o.customerId).branchId===b.id);
+    return `<tr><td>${b.name}</td><td>${bo.length}</td><td>${fmtQty(bo.reduce((s,o)=>s+o.lines.reduce((s2,l)=>s2+l.qty,0),0))}</td><td>${fmtMoney(bo.reduce((s,o)=>s+o.lines.reduce((s2,l)=>s2+l.lineTotal,0),0))}</td></tr>`; }).join('')}
+  </tbody></table></div>` : ''}
+  `;
+}
+
+function renderAudit(){
+  let body = document.getElementById('adminBody');
+  body.innerHTML = `<div class="panel"><h3>Audit Log</h3>
+  <table><thead><tr><th>Timestamp</th><th>User</th><th>Action</th><th>Entity</th><th>Before</th><th>After</th></tr></thead><tbody>
+  ${auditLog.map(a=>`<tr><td>${a.ts}</td><td>${a.user}</td><td>${a.action}</td><td>${a.entity}</td><td class="audit-note">${a.before}</td><td class="audit-note">${a.after}</td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+
+function exportCsv(rows, filename){
+  if(!rows.length){ alert('Nothing to export.'); return; }
+  let cols = Object.keys(rows[0]);
+  let csv = cols.join(',') + '\n' + rows.map(r=>cols.map(c=>`"${String(r[c]??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  let blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});
+  let a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+initAdminSelectors();
+document.querySelectorAll('.super-only').forEach(el=> el.style.display = '');
+goTo('entry');
+</script>
+</body>
+</html>

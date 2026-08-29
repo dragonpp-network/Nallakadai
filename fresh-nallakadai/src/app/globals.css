@@ -1,0 +1,143 @@
+@import "tailwindcss";
+
+@theme {
+  --color-maroon: oklch(0.362 0.113 27.4);
+  --color-maroon-dark: oklch(0.255 0.085 27.4);
+  --color-olive: oklch(0.628 0.112 128);
+  --color-olive-dark: oklch(0.52 0.099 128);
+  --color-gold: oklch(0.727 0.13 90);
+  --color-cream: oklch(0.975 0.014 95);
+  --color-cream-2: oklch(0.936 0.027 92);
+  --color-paper: oklch(0.991 0.008 95);
+  --color-ink: oklch(0.253 0.031 55);
+  --color-ink-soft: oklch(0.46 0.028 62);
+  --color-ok: oklch(0.515 0.12 142);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-display: var(--font-display, "Rozha One", "Noto Sans Tamil", serif);
+  --font-sans: var(--font-sans, "Poppins", "Noto Sans Tamil", sans-serif);
+  --font-tamil: var(--font-tamil, "Noto Sans Tamil", "Poppins", sans-serif);
+}
+
+:root {
+  --radius: 0.875rem;
+
+  --maroon: oklch(0.362 0.113 27.4);
+  --maroon-dark: oklch(0.255 0.085 27.4);
+  --olive: oklch(0.628 0.112 128);
+  --olive-dark: oklch(0.52 0.099 128);
+  --gold: oklch(0.727 0.13 90);
+  --cream: oklch(0.975 0.014 95);
+  --cream-2: oklch(0.936 0.027 92);
+  --paper: oklch(0.991 0.008 95);
+  --ink: oklch(0.253 0.031 55);
+  --ink-soft: oklch(0.46 0.028 62);
+  --ok: oklch(0.515 0.12 142);
+
+  --background: var(--cream);
+  --foreground: var(--ink);
+  --card: var(--paper);
+  --card-foreground: var(--ink);
+  --popover: var(--paper);
+  --popover-foreground: var(--ink);
+  --primary: var(--maroon);
+  --primary-foreground: oklch(0.985 0.01 95);
+  --secondary: var(--olive);
+  --secondary-foreground: oklch(0.99 0.008 95);
+  --muted: var(--cream-2);
+  --muted-foreground: var(--ink-soft);
+  --accent: oklch(0.955 0.022 95);
+  --accent-foreground: var(--maroon);
+  --destructive: oklch(0.487 0.16 33);
+  --destructive-foreground: oklch(0.99 0.008 95);
+  --border: oklch(0.897 0.026 92);
+  --input: oklch(0.897 0.026 92);
+  --ring: var(--olive);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.ta, .font-tamil {
+  font-family: var(--font-tamil);
+}
+
+.glass {
+  background: color-mix(in oklab, var(--color-card) 60%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-border) 65%, transparent);
+  border-radius: 1.5rem;
+  box-shadow: 0 1px 2px oklch(0.36 0.11 27 / 0.05), 0 10px 30px oklch(0.36 0.11 27 / 0.07);
+  backdrop-filter: blur(20px) saturate(150%);
+}
+
+.glass-chip {
+  background: color-mix(in oklab, var(--color-card) 55%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-border) 60%, transparent);
+  border-radius: 999px;
+  backdrop-filter: blur(14px) saturate(140%);
+}
+
+.app-canvas {
+  background:
+    radial-gradient(60rem 30rem at 8% -10%, color-mix(in oklab, var(--color-olive) 22%, transparent), transparent 70%),
+    radial-gradient(50rem 26rem at 105% 0%, color-mix(in oklab, var(--color-gold) 20%, transparent), transparent 70%),
+    radial-gradient(46rem 30rem at 50% 115%, color-mix(in oklab, var(--color-maroon) 12%, transparent), transparent 72%),
+    var(--color-background);
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .print-root {
+    position: static !important;
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .print-sheet {
+    page-break-after: always;
+    break-after: page;
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+    margin-bottom: 20px;
+  }
+  .print-sheet:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+}

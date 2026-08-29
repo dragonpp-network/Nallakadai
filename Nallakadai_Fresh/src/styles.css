@@ -1,0 +1,242 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Fresh Nalla Kadai design system.
+ * Maroon / olive / cream palette taken from the brand site.
+ * All colours are oklch tokens — never hardcode colours in components.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-maroon: var(--maroon);
+  --color-maroon-dark: var(--maroon-dark);
+  --color-olive: var(--olive);
+  --color-olive-dark: var(--olive-dark);
+  --color-gold: var(--gold);
+  --color-cream: var(--cream);
+  --color-cream-2: var(--cream-2);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ok: var(--ok);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --font-display: "Rozha One", "Noto Sans Tamil", serif;
+  --font-sans: "Poppins", "Noto Sans Tamil", sans-serif;
+  --font-tamil: "Noto Sans Tamil", "Poppins", sans-serif;
+  --shadow-warm: 0 6px 20px oklch(0.36 0.11 27 / 0.12);
+  --shadow-lift: 0 12px 34px oklch(0.36 0.11 27 / 0.16);
+  --shadow-soft: 0 1px 2px oklch(0.36 0.11 27 / 0.05), 0 10px 30px oklch(0.36 0.11 27 / 0.07);
+
+}
+
+:root {
+  --radius: 0.875rem;
+
+  --maroon: oklch(0.362 0.113 27.4);
+  --maroon-dark: oklch(0.255 0.085 27.4);
+  --olive: oklch(0.628 0.112 128);
+  --olive-dark: oklch(0.52 0.099 128);
+  --gold: oklch(0.727 0.13 90);
+  --cream: oklch(0.975 0.014 95);
+  --cream-2: oklch(0.936 0.027 92);
+  --paper: oklch(0.991 0.008 95);
+  --ink: oklch(0.253 0.031 55);
+  --ink-soft: oklch(0.46 0.028 62);
+  --ok: oklch(0.515 0.12 142);
+
+  --background: var(--cream);
+  --foreground: var(--ink);
+  --card: var(--paper);
+  --card-foreground: var(--ink);
+  --popover: var(--paper);
+  --popover-foreground: var(--ink);
+  --primary: var(--maroon);
+  --primary-foreground: oklch(0.985 0.01 95);
+  --secondary: var(--olive);
+  --secondary-foreground: oklch(0.99 0.008 95);
+  --muted: var(--cream-2);
+  --muted-foreground: var(--ink-soft);
+  --accent: oklch(0.955 0.022 95);
+  --accent-foreground: var(--maroon);
+  --destructive: oklch(0.487 0.16 33);
+  --destructive-foreground: oklch(0.99 0.008 95);
+  --border: oklch(0.897 0.026 92);
+  --input: oklch(0.897 0.026 92);
+  --ring: var(--olive);
+  --chart-1: oklch(0.362 0.113 27.4);
+  --chart-2: oklch(0.628 0.112 128);
+  --chart-3: oklch(0.727 0.13 90);
+  --chart-4: oklch(0.6 0.09 60);
+  --chart-5: oklch(0.46 0.028 62);
+  --sidebar: var(--maroon-dark);
+  --sidebar-foreground: oklch(0.96 0.015 90);
+  --sidebar-primary: var(--olive);
+  --sidebar-primary-foreground: oklch(0.99 0.008 95);
+  --sidebar-accent: oklch(0.32 0.095 27.4);
+  --sidebar-accent-foreground: oklch(0.97 0.015 90);
+  --sidebar-border: oklch(0.32 0.095 27.4);
+  --sidebar-ring: var(--olive);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: 0.01em;
+  }
+}
+
+@utility ta {
+  font-family: var(--font-tamil);
+}
+
+@utility card-warm {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-warm);
+}
+
+/* Frosted surfaces — light, airy, rounded */
+@utility glass {
+  background: color-mix(in oklab, var(--color-card) 60%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-border) 65%, transparent);
+  border-radius: 1.5rem;
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(20px) saturate(150%);
+}
+
+@utility glass-tint {
+  border: 1px solid color-mix(in oklab, var(--color-border) 55%, transparent);
+  border-radius: 1.5rem;
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(16px) saturate(140%);
+}
+
+@utility glass-dark {
+  background: color-mix(in oklab, var(--color-primary) 78%, transparent);
+  border: 1px solid oklch(1 0 0 / 0.16);
+  border-radius: 1.75rem;
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(20px) saturate(150%);
+}
+
+@utility glass-chip {
+  background: color-mix(in oklab, var(--color-card) 55%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-border) 60%, transparent);
+  border-radius: 999px;
+  backdrop-filter: blur(14px) saturate(140%);
+}
+
+/* Soft canvas glow behind the frosted layers */
+@utility app-canvas {
+  background:
+    radial-gradient(60rem 30rem at 8% -10%, color-mix(in oklab, var(--color-olive) 22%, transparent), transparent 70%),
+    radial-gradient(50rem 26rem at 105% 0%, color-mix(in oklab, var(--color-gold) 20%, transparent), transparent 70%),
+    radial-gradient(46rem 30rem at 50% 115%, color-mix(in oklab, var(--color-maroon) 12%, transparent), transparent 72%),
+    var(--color-background);
+}
+
+
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+  /* Isolate the printable region: hide siblings all the way up the tree. */
+  body :has(.print-root) > *:not(:has(.print-root)):not(.print-root) {
+    display: none !important;
+  }
+  .print-root {
+    position: static !important;
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .print-sheet {
+    page-break-after: always;
+    break-after: page;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  .print-sheet:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tr,
+  article,
+  section {
+    break-inside: avoid;
+  }
+}
+
