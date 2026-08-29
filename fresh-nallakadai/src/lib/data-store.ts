@@ -5,6 +5,7 @@ import {
   INITIAL_BRANDS,
   INITIAL_CATEGORIES,
   INITIAL_ITEMS,
+  INITIAL_COUPONS,
   INITIAL_CUSTOMERS,
   INITIAL_CYCLE,
   INITIAL_ORDERS,
@@ -18,11 +19,30 @@ export interface StoreState {
   brands: typeof INITIAL_BRANDS;
   categories: typeof INITIAL_CATEGORIES;
   items: typeof INITIAL_ITEMS;
+  coupons: typeof INITIAL_COUPONS;
   customers: typeof INITIAL_CUSTOMERS;
   cycles: (typeof INITIAL_CYCLE)[];
-  cycle_items: { cycle_id: string; item_id: string; price: number; cap_qty?: number | null; min_qty?: number | null; max_qty?: number | null }[];
+  cycle_items: {
+    cycle_id: string;
+    item_id: string;
+    price: number;
+    procurement_cost?: number;
+    selling_price?: number;
+    discount_percent?: number;
+    cap_qty?: number | null;
+    min_qty?: number | null;
+    max_qty?: number | null;
+  }[];
   orders: typeof INITIAL_ORDERS;
-  admin_users: { id: string; email: string; password_hash: string; full_name: string; role: string; branch_id: string | null; active: boolean }[];
+  admin_users: {
+    id: string;
+    email: string;
+    password_hash: string;
+    full_name: string;
+    role: string;
+    branch_id: string | null;
+    active: boolean;
+  }[];
   audit_logs: any[];
 }
 
@@ -31,6 +51,9 @@ function getDefaultState(): StoreState {
     cycle_id: INITIAL_CYCLE.id,
     item_id: i.id,
     price: i.price,
+    procurement_cost: i.procurement_cost,
+    selling_price: i.selling_price,
+    discount_percent: i.discount_percent,
     cap_qty: null,
     min_qty: i.min_qty,
     max_qty: i.max_qty,
@@ -41,6 +64,7 @@ function getDefaultState(): StoreState {
     brands: [...INITIAL_BRANDS],
     categories: [...INITIAL_CATEGORIES],
     items: [...INITIAL_ITEMS],
+    coupons: [...INITIAL_COUPONS],
     customers: [...INITIAL_CUSTOMERS],
     cycles: [{ ...INITIAL_CYCLE }],
     cycle_items: cycleItems,
@@ -93,32 +117,45 @@ export function getLocalStore(): StoreState {
     if (!parsed.brands) {
       parsed.brands = [...INITIAL_BRANDS];
     }
+    if (!parsed.coupons) {
+      parsed.coupons = [...INITIAL_COUPONS];
+    }
+    // Backfill pricing & discount fields on existing items if needed
+    for (const item of parsed.items || []) {
+      if (item.procurement_cost === undefined) {
+        item.procurement_cost = Math.round(item.price * 0.7);
+      }
+      if (item.selling_price === undefined) {
+        item.selling_price = item.price;
+      }
+      if (item.discount_percent === undefined) {
+        item.discount_percent = 0;
+      }
+    }
     return parsed;
   } catch (err) {
     return getDefaultState();
   }
 }
 
-export function saveLocalStore(state: StoreState) {
+export function saveLocalStore(store: StoreState) {
   try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
-    fs.writeFileSync(STORE_FILE, JSON.stringify(state, null, 2), "utf8");
+    fs.writeFileSync(STORE_FILE, JSON.stringify(store, null, 2), "utf8");
   } catch (err) {
-    console.error("Failed to save local store:", err);
+    console.error("Error saving local store:", err);
   }
-}
-
-export function resetLocalStoreDemoData() {
-  const fresh = getDefaultState();
-  saveLocalStore(fresh);
-  return fresh;
 }
 
 export function clearLocalStoreOrders() {
   const store = getLocalStore();
   store.orders = [];
   saveLocalStore(store);
-  return store;
+}
+
+export function resetLocalStoreDemoData() {
+  const initial = getDefaultState();
+  saveLocalStore(initial);
 }

@@ -62,6 +62,9 @@ export default function AdminItemsPage() {
   const [presetsStr, setPresetsStr] = useState("0.5, 1, 2");
   const [minQty, setMinQty] = useState(0.25);
   const [maxQty, setMaxQty] = useState(10);
+  const [procurementCost, setProcurementCost] = useState(30);
+  const [sellingPrice, setSellingPrice] = useState(50);
+  const [discountPercent, setDiscountPercent] = useState(0);
   const [active, setActive] = useState(true);
 
   useEffect(() => {
@@ -100,6 +103,9 @@ export default function AdminItemsPage() {
     setPresetsStr("0.5, 1, 2");
     setMinQty(0.25);
     setMaxQty(10);
+    setProcurementCost(30);
+    setSellingPrice(50);
+    setDiscountPercent(0);
     setActive(true);
     setModalOpen(true);
   }
@@ -115,6 +121,9 @@ export default function AdminItemsPage() {
     setPresetsStr((item.presets || []).join(", "));
     setMinQty(Number(item.min_qty));
     setMaxQty(Number(item.max_qty));
+    setProcurementCost(Number(item.procurement_cost !== undefined ? item.procurement_cost : Math.round((item.price || 50) * 0.7)));
+    setSellingPrice(Number(item.selling_price || item.price || 50));
+    setDiscountPercent(Number(item.discount_percent || 0));
     setActive(item.active);
     setModalOpen(true);
   }
@@ -138,14 +147,17 @@ export default function AdminItemsPage() {
         presets,
         minQty: Number(minQty),
         maxQty: Number(maxQty),
+        procurementCost: Number(procurementCost),
+        sellingPrice: Number(sellingPrice),
+        discountPercent: Number(discountPercent),
         active,
       });
 
-      toast.success(editingItem ? "Item updated!" : "Master item created!");
+      toast.success(editingItem ? "Item updated" : "Item created");
       setModalOpen(false);
       loadData();
     } catch (err: any) {
-      toast.error(err.message || "Failed to save item");
+      toast.error("Failed to save item");
     }
   }
 
@@ -734,6 +746,79 @@ export default function AdminItemsPage() {
                   onChange={(e) => setMaxQty(parseFloat(e.target.value) || 0)}
                   className="mt-1 rounded-xl text-sm"
                 />
+              </div>
+            </div>
+
+            {/* Pricing, Buying Cost & Discounts Card */}
+            <div className="rounded-2xl bg-muted/60 p-3.5 border space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                <span>Pricing & Margins</span>
+                {sellingPrice > 0 && (
+                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-500/10 px-2 py-0.5 rounded-lg">
+                    Margin:{" "}
+                    {Math.round(
+                      (((sellingPrice - (sellingPrice * discountPercent) / 100) - procurementCost) /
+                        (sellingPrice - (sellingPrice * discountPercent) / 100)) *
+                        100
+                    )}
+                    %
+                  </span>
+                )}
+              </h4>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <Label className="text-[11px] font-semibold text-muted-foreground">
+                    Buying Cost (₹)
+                  </Label>
+                  <Input
+                    type="number"
+                    step="any"
+                    value={procurementCost}
+                    onChange={(e) => setProcurementCost(parseFloat(e.target.value) || 0)}
+                    placeholder="e.g. 28"
+                    className="mt-1 rounded-xl text-sm bg-background font-mono"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-[11px] font-semibold text-muted-foreground">
+                    MRP / Selling (₹)
+                  </Label>
+                  <Input
+                    type="number"
+                    step="any"
+                    value={sellingPrice}
+                    onChange={(e) => setSellingPrice(parseFloat(e.target.value) || 0)}
+                    placeholder="e.g. 45"
+                    className="mt-1 rounded-xl text-sm bg-background font-mono"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-[11px] font-semibold text-muted-foreground">
+                    Discount (%)
+                  </Label>
+                  <Input
+                    type="number"
+                    step="1"
+                    min="0"
+                    max="90"
+                    value={discountPercent}
+                    onChange={(e) => setDiscountPercent(parseFloat(e.target.value) || 0)}
+                    placeholder="e.g. 10"
+                    className="mt-1 rounded-xl text-sm bg-background font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center text-xs pt-1 border-t">
+                <span className="text-muted-foreground">Final Customer Price:</span>
+                <span className="text-sm font-bold text-primary font-mono">
+                  ₹{Math.round((sellingPrice - (sellingPrice * discountPercent) / 100) * 100) / 100} / {unit}
+                </span>
               </div>
             </div>
 
