@@ -1,0 +1,828 @@
+{
+  "branches": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "name": "Erode",
+      "address": "Nalla Kadai Organic, Perundurai Road, Erode",
+      "whatsapp_number": "919489581122",
+      "support_number": "919489581122",
+      "pickup_address": "Nalla Kadai Organic, Perundurai Road, Erode (Opp. Reliance Mall)",
+      "collection_timing": "Tuesday 8:00 AM – 12:00 PM",
+      "show_prices": true,
+      "next_opening_note": "Our Fresh store opens every Friday evening for Tuesday delivery.",
+      "active": true
+    },
+    {
+      "id": "11111111-2222-4111-8111-111111111111",
+      "name": "Coimbatore",
+      "address": "Nalla Kadai, RS Puram, Coimbatore",
+      "whatsapp_number": "919489581133",
+      "support_number": "919489581133",
+      "pickup_address": "Nalla Kadai, DB Road, RS Puram, Coimbatore",
+      "collection_timing": "Wednesday 8:00 AM – 1:00 PM",
+      "show_prices": true,
+      "next_opening_note": "Coimbatore cycle opens Saturday 10:00 AM.",
+      "active": true
+    },
+    {
+      "id": "11111111-3333-4111-8111-111111111111",
+      "name": "Tiruppur",
+      "address": "Nalla Kadai, Avinashi Road, Tiruppur",
+      "whatsapp_number": "919489581144",
+      "support_number": "919489581144",
+      "pickup_address": "Nalla Kadai, Kumaran Road, Tiruppur",
+      "collection_timing": "Friday 8:00 AM – 12:00 PM",
+      "show_prices": true,
+      "next_opening_note": "Tiruppur cycle opens Tuesday 9:00 AM.",
+      "active": true
+    }
+  ],
+  "categories": [
+    {
+      "id": "22222222-0001-4111-8111-111111111111",
+      "name": "Vegetables",
+      "name_ta": "காய்கறிகள்",
+      "tint": "#EAF3DD",
+      "sort_order": 1,
+      "active": true
+    },
+    {
+      "id": "22222222-0002-4111-8111-111111111111",
+      "name": "Greens",
+      "name_ta": "கீரைகள்",
+      "tint": "#DCEBD3",
+      "sort_order": 2,
+      "active": true
+    },
+    {
+      "id": "22222222-0003-4111-8111-111111111111",
+      "name": "Fruits",
+      "name_ta": "பழங்கள்",
+      "tint": "#FBE9D8",
+      "sort_order": 3,
+      "active": true
+    },
+    {
+      "id": "22222222-0004-4111-8111-111111111111",
+      "name": "Dairy",
+      "name_ta": "பால் பொருட்கள்",
+      "tint": "#EFF3FA",
+      "sort_order": 4,
+      "active": true
+    },
+    {
+      "id": "22222222-0005-4111-8111-111111111111",
+      "name": "Vegan",
+      "name_ta": "வீகன்",
+      "tint": "#F1EEDD",
+      "sort_order": 5,
+      "active": true
+    },
+    {
+      "id": "22222222-006-4111-8111-111111111111",
+      "name": "Biscuits",
+      "name_ta": "பிஸ்கட்",
+      "tint": "#F1EEDD",
+      "sort_order": 6,
+      "active": true
+    }
+  ],
+  "items": [
+    {
+      "id": "33333333-0001-4111-8111-111111111111",
+      "name_en": "Country Tomato",
+      "name_ta": "நாட்டுத் தக்காளி",
+      "category_id": "22222222-0001-4111-8111-111111111111",
+      "unit": "Kg",
+      "presets": [
+        0.5,
+        1,
+        2
+      ],
+      "min_qty": 0.25,
+      "max_qty": 10,
+      "price": 40,
+      "active": true,
+      "brand_id": null,
+      "image_url": "data:image/jpeg;base64,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"
+    },
+    {
+      "id": "33333333-0002-4111-8111-111111111111",
+      "name_en": "Ladies Finger (Okra)",
+      "name_ta": "வெண்டைக்காய்",
+      "category_id": "22222222-0001-4111-8111-111111111111",
+      "unit": "Kg",
+      "presets": [
+        0.25,
+        0.5,
+        1
+      ],
+      "min_qty": 0.25,
+      "max_qty": 5,
+      "price": 60,
+      "active": true
+    },
+    {
+      "id": "33333333-0003-4111-8111-111111111111",
+      "name_en": "Country Drumstick",
+      "name_ta": "நாட்டு முருங்கைக்காய்",
+      "category_id": "22222222-0001-4111-8111-111111111111",
+      "unit": "Nos",
+      "presets": [
+        2,
+        5,
+        10
+      ],
+      "min_qty": 1,
+      "max_qty": 25,
+      "price": 12,
+      "active": true
+    },
+    {
+      "id": "33333333-0004-4111-8111-111111111111",
+      "name_en": "Korai Kizhangu",
+      "name_ta": "கோரைக்கிழங்கு",
+      "category_id": "22222222-0001-4111-8111-111111111111",
+      "unit": "Kg",
+      "presets": [
+        0.25,
+        0.5,
+        1
+      ],
+      "min_qty": 0.25,
+      "max_qty": 3,
+      "price": 120,
+      "active": true
+    },
+    {
+      "id": "33333333-0005-4111-8111-111111111111",
+      "name_en": "Small Onion (Shallots)",
+      "name_ta": "சின்ன வெங்காயம்",
+      "category_id": "22222222-0001-4111-8111-111111111111",
+      "unit": "Kg",
+      "presets": [
+        0.5,
+        1,
+        2
+      ],
+      "min_qty": 0.25,
+      "max_qty": 5,
+      "price": 85,
+      "active": true
+    },
+    {
+      "id": "33333333-0006-4111-8111-111111111111",
+      "name_en": "Green Chilli",
+      "name_ta": "பச்சை மிளகாய்",
+      "category_id": "22222222-0001-4111-8111-111111111111",
+      "unit": "Kg",
+      "presets": [
+        0.1,
+        0.25,
+        0.5
+      ],
+      "min_qty": 0.1,
+      "max_qty": 2,
+      "price": 60,
+      "active": true
+    },
+    {
+      "id": "33333333-0007-4111-8111-111111111111",
+      "name_en": "Brinjal (Eggplant)",
+      "name_ta": "கத்திரிக்காய்",
+      "category_id": "22222222-0001-4111-8111-111111111111",
+      "unit": "Kg",
+      "presets": [
+        0.5,
+        1,
+        2
+      ],
+      "min_qty": 0.25,
+      "max_qty": 5,
+      "price": 45,
+      "active": true
+    },
+    {
+      "id": "33333333-0008-4111-8111-111111111111",
+      "name_en": "Spinach (Pasalai)",
+      "name_ta": "பசலைக்கீரை",
+      "category_id": "22222222-0002-4111-8111-111111111111",
+      "unit": "Nos",
+      "presets": [
+        1,
+        2,
+        3
+      ],
+      "min_qty": 1,
+      "max_qty": 10,
+      "price": 20,
+      "active": true
+    },
+    {
+      "id": "33333333-0009-4111-8111-111111111111",
+      "name_en": "Moringa Leaves",
+      "name_ta": "முருங்கைக்கீரை",
+      "category_id": "22222222-0002-4111-8111-111111111111",
+      "unit": "Nos",
+      "presets": [
+        1,
+        2
+      ],
+      "min_qty": 1,
+      "max_qty": 10,
+      "price": 20,
+      "active": true
+    },
+    {
+      "id": "33333333-0010-4111-8111-111111111111",
+      "name_en": "Sirukeerai",
+      "name_ta": "சிறுகீரை",
+      "category_id": "22222222-0002-4111-8111-111111111111",
+      "unit": "Nos",
+      "presets": [
+        1,
+        2,
+        3
+      ],
+      "min_qty": 1,
+      "max_qty": 10,
+      "price": 20,
+      "active": true
+    },
+    {
+      "id": "33333333-0011-4111-8111-111111111111",
+      "name_en": "Arai Keerai",
+      "name_ta": "அரைக்கீரை",
+      "category_id": "22222222-0002-4111-8111-111111111111",
+      "unit": "Nos",
+      "presets": [
+        1,
+        2
+      ],
+      "min_qty": 1,
+      "max_qty": 10,
+      "price": 20,
+      "active": true
+    },
+    {
+      "id": "33333333-0012-4111-8111-111111111111",
+      "name_en": "Banana (Poovan)",
+      "name_ta": "பூவன் பழம்",
+      "category_id": "22222222-0003-4111-8111-111111111111",
+      "unit": "Kg",
+      "presets": [
+        0.5,
+        1,
+        2
+      ],
+      "min_qty": 0.5,
+      "max_qty": 5,
+      "price": 70,
+      "active": true
+    },
+    {
+      "id": "33333333-0013-4111-8111-111111111111",
+      "name_en": "Country Guava",
+      "name_ta": "நாட்டு கொய்யா",
+      "category_id": "22222222-0003-4111-8111-111111111111",
+      "unit": "Kg",
+      "presets": [
+        0.5,
+        1
+      ],
+      "min_qty": 0.5,
+      "max_qty": 5,
+      "price": 90,
+      "active": true
+    },
+    {
+      "id": "33333333-0014-4111-8111-111111111111",
+      "name_en": "Papaya",
+      "name_ta": "பப்பாளி",
+      "category_id": "22222222-0003-4111-8111-111111111111",
+      "unit": "Kg",
+      "presets": [
+        1,
+        2
+      ],
+      "min_qty": 0.5,
+      "max_qty": 5,
+      "price": 50,
+      "active": true
+    },
+    {
+      "id": "33333333-0015-4111-8111-111111111111",
+      "name_en": "Fresh A2 Cow Milk",
+      "name_ta": "நாட்டுப் பசு பால்",
+      "category_id": "22222222-0004-4111-8111-111111111111",
+      "unit": "Litre",
+      "presets": [
+        0.5,
+        1,
+        2
+      ],
+      "min_qty": 0.5,
+      "max_qty": 5,
+      "price": 65,
+      "active": true
+    },
+    {
+      "id": "33333333-0016-4111-8111-111111111111",
+      "name_en": "Farm Fresh Curd",
+      "name_ta": "பண்ணைத் தயிர்",
+      "category_id": "22222222-0004-4111-8111-111111111111",
+      "unit": "Gram",
+      "presets": [
+        250,
+        500
+      ],
+      "min_qty": 200,
+      "max_qty": 2000,
+      "price": 0.09,
+      "active": true
+    },
+    {
+      "id": "33333333-0017-4111-8111-111111111111",
+      "name_en": "Country Butter (Venna)",
+      "name_ta": "வெண்ணெய்",
+      "category_id": "22222222-0004-4111-8111-111111111111",
+      "unit": "Gram",
+      "presets": [
+        250,
+        500
+      ],
+      "min_qty": 100,
+      "max_qty": 2000,
+      "price": 0.7,
+      "active": true
+    },
+    {
+      "id": "33333333-0018-4111-8111-111111111111",
+      "name_en": "Cold Pressed Groundnut Oil",
+      "name_ta": "மரச்செக்கு நிலக்கடலை எண்ணெய்",
+      "category_id": "22222222-0005-4111-8111-111111111111",
+      "unit": "Litre",
+      "presets": [
+        0.5,
+        1
+      ],
+      "min_qty": 0.5,
+      "max_qty": 5,
+      "price": 320,
+      "active": true
+    },
+    {
+      "id": "33333333-0019-4111-8111-111111111111",
+      "name_en": "Cold Pressed Sesame Oil",
+      "name_ta": "மரச்செக்கு நல்லெண்ணெய்",
+      "category_id": "22222222-0005-4111-8111-111111111111",
+      "unit": "Litre",
+      "presets": [
+        0.5,
+        1
+      ],
+      "min_qty": 0.5,
+      "max_qty": 5,
+      "price": 440,
+      "active": true
+    },
+    {
+      "id": "33333333-0020-4111-8111-111111111111",
+      "name_en": "Marie Biscuit",
+      "name_ta": "",
+      "category_id": "22222222-0001-4111-8111-111111111111",
+      "unit": "Nos",
+      "presets": [
+        1,
+        5
+      ],
+      "min_qty": 1,
+      "max_qty": 10,
+      "price": 50,
+      "active": true
+    }
+  ],
+  "customers": [
+    {
+      "id": "55555555-0001-4111-8111-111111111111",
+      "name": "Sampath Kumar",
+      "mobile": "9489581122",
+      "alt_mobile": "9842711000",
+      "branch_id": "11111111-1111-4111-8111-111111111111",
+      "delivery_mode": "Door Delivery",
+      "address": "12, Kamarajar Street, Erode",
+      "area": "Perundurai Road",
+      "active": true
+    },
+    {
+      "id": "55555555-0002-4111-8111-111111111111",
+      "name": "Lakshmi Devi",
+      "mobile": "9600012345",
+      "alt_mobile": null,
+      "branch_id": "11111111-1111-4111-8111-111111111111",
+      "delivery_mode": "Customer Pickup",
+      "address": "",
+      "area": "Surampatti",
+      "active": true
+    },
+    {
+      "id": "55555555-0003-4111-8111-111111111111",
+      "name": "Ramasamy Natarajan",
+      "mobile": "9842711223",
+      "alt_mobile": null,
+      "branch_id": "11111111-1111-4111-8111-111111111111",
+      "delivery_mode": "Door Delivery",
+      "address": "45 Gandhi Nagar, Erode",
+      "area": "Thindal",
+      "active": true
+    },
+    {
+      "id": "55555555-0004-4111-8111-111111111111",
+      "name": "Kavitha Senthil",
+      "mobile": "9443355667",
+      "alt_mobile": "9443355668",
+      "branch_id": "11111111-1111-4111-8111-111111111111",
+      "delivery_mode": "Door Delivery",
+      "address": "8A, VOC Nagar, Erode",
+      "area": "Brough Road",
+      "active": true
+    },
+    {
+      "id": "55555555-0005-4111-8111-111111111111",
+      "name": "Dr. Anand Raman",
+      "mobile": "9894011234",
+      "alt_mobile": null,
+      "branch_id": "11111111-1111-4111-8111-111111111111",
+      "delivery_mode": "Door Delivery",
+      "address": "102 Doctors Colony, Erode",
+      "area": "Collectorate",
+      "active": true
+    },
+    {
+      "id": "55555555-0006-4111-8111-111111111111",
+      "name": "Meena Murugan",
+      "mobile": "9789012345",
+      "alt_mobile": null,
+      "branch_id": "11111111-1111-4111-8111-111111111111",
+      "delivery_mode": "Customer Pickup",
+      "address": "",
+      "area": "Solar",
+      "active": true
+    }
+  ],
+  "cycles": [
+    {
+      "id": "44444444-0001-4111-8111-111111111111",
+      "branch_id": "11111111-1111-4111-8111-111111111111",
+      "cycle_no": 1,
+      "open_at": "2026-08-28T08:15:48.187Z",
+      "close_at": "2026-09-03T08:15:48.187Z",
+      "delivery_date": "2026-09-05",
+      "status": "Open",
+      "manual_override": null
+    }
+  ],
+  "cycle_items": [
+    {
+      "cycle_id": "44444444-0001-4111-8111-111111111111",
+      "item_id": "33333333-0001-4111-8111-111111111111",
+      "price": 40,
+      "cap_qty": null,
+      "min_qty": 0.25,
+      "max_qty": 10
+    },
+    {
+      "cycle_id": "44444444-0001-4111-8111-111111111111",
+      "item_id": "33333333-0002-4111-8111-111111111111",
+      "price": 60,
+      "cap_qty": null,
+      "min_qty": 0.25,
+      "max_qty": 5
+    },
+    {
+      "cycle_id": "44444444-0001-4111-8111-111111111111",
+      "item_id": "33333333-0003-4111-8111-111111111111",
+      "price": 12,
+      "cap_qty": null,
+      "min_qty": 1,
+      "max_qty": 25
+    },
+    {
+      "cycle_id": "44444444-0001-4111-8111-111111111111",
+      "item_id": "33333333-0004-4111-8111-111111111111",
+      "price": 120,
+      "cap_qty": null,
+      "min_qty": 0.25,
+      "max_qty": 3
+    },
+    {
+      "cycle_id": "44444444-0001-4111-8111-111111111111",
+      "item_id": "33333333-0005-4111-8111-111111111111",
+      "price": 85,
+      "cap_qty": null,
+      "min_qty": 0.25,
+      "max_qty": 5
+    },
+    {
+      "cycle_id": "44444444-0001-4111-8111-111111111111",
+      "item_id": "33333333-0006-4111-8111-111111111111",
+      "price": 60,
+      "cap_qty": null,
+      "min_qty": 0.1,
+      "max_qty": 2
+    },
+    {
+      "cycle_id": "44444444-0001-4111-8111-111111111111",
+      "item_id": "33333333-0007-4111-8111-111111111111",
+      "price": 45,
+      "cap_qty": null,
+      "min_qty": 0.25,
+      "max_qty": 5
+    },
+    {
+      "cycle_id": "44444444-0001-4111-8111-111111111111",
+      "item_id": "33333333-0008-4111-8111-111111111111",
+      "price": 20,
+      "cap_qty": null,
+      "min_qty": 1,
+      "max_qty": 10
+    },
+    {
+      "cycle_id": "44444444-0001-4111-8111-111111111111",
+      "item_id": "33333333-0009-4111-8111-111111111111",
+      "price": 20,
+      "cap_qty": null,
+      "min_qty": 1,
+      "max_qty": 10
+    },
+    {
+      "cycle_id": "44444444-0001-4111-8111-111111111111",
+      "item_id": "33333333-0010-4111-8111-111111111111",
+      "price": 20,
+      "cap_qty": null,
+      "min_qty": 1,
+      "max_qty": 10
+    },
+    {
+      "cycle_id": "44444444-0001-4111-8111-111111111111",
+      "item_id": "33333333-0011-4111-8111-111111111111",
+      "price": 20,
+      "cap_qty": null,
+      "min_qty": 1,
+      "max_qty": 10
+    },
+    {
+      "cycle_id": "44444444-0001-4111-8111-111111111111",
+      "item_id": "33333333-0012-4111-8111-111111111111",
+      "price": 70,
+      "cap_qty": null,
+      "min_qty": 0.5,
+      "max_qty": 5
+    },
+    {
+      "cycle_id": "44444444-0001-4111-8111-111111111111",
+      "item_id": "33333333-0013-4111-8111-111111111111",
+      "price": 90,
+      "cap_qty": null,
+      "min_qty": 0.5,
+      "max_qty": 5
+    },
+    {
+      "cycle_id": "44444444-0001-4111-8111-111111111111",
+      "item_id": "33333333-0014-4111-8111-111111111111",
+      "price": 50,
+      "cap_qty": null,
+      "min_qty": 0.5,
+      "max_qty": 5
+    },
+    {
+      "cycle_id": "44444444-0001-4111-8111-111111111111",
+      "item_id": "33333333-0015-4111-8111-111111111111",
+      "price": 65,
+      "cap_qty": null,
+      "min_qty": 0.5,
+      "max_qty": 5
+    },
+    {
+      "cycle_id": "44444444-0001-4111-8111-111111111111",
+      "item_id": "33333333-0016-4111-8111-111111111111",
+      "price": 0.09,
+      "cap_qty": null,
+      "min_qty": 200,
+      "max_qty": 2000
+    },
+    {
+      "cycle_id": "44444444-0001-4111-8111-111111111111",
+      "item_id": "33333333-0017-4111-8111-111111111111",
+      "price": 0.7,
+      "cap_qty": null,
+      "min_qty": 100,
+      "max_qty": 2000
+    },
+    {
+      "cycle_id": "44444444-0001-4111-8111-111111111111",
+      "item_id": "33333333-0018-4111-8111-111111111111",
+      "price": 320,
+      "cap_qty": null,
+      "min_qty": 0.5,
+      "max_qty": 5
+    },
+    {
+      "cycle_id": "44444444-0001-4111-8111-111111111111",
+      "item_id": "33333333-0019-4111-8111-111111111111",
+      "price": 440,
+      "cap_qty": null,
+      "min_qty": 0.5,
+      "max_qty": 5
+    }
+  ],
+  "orders": [
+    {
+      "id": "66666666-0001-4111-8111-111111111111",
+      "order_no": "FNK-1001",
+      "cycle_id": "44444444-0001-4111-8111-111111111111",
+      "customer_id": "55555555-0001-4111-8111-111111111111",
+      "branch_id": "11111111-1111-4111-8111-111111111111",
+      "delivery_mode": "Door Delivery",
+      "delivery_address": "12, Kamarajar Street, Erode",
+      "status": "Placed",
+      "created_at": "2026-08-29T03:15:48.187Z",
+      "lines": [
+        {
+          "item_id": "33333333-0001-4111-8111-111111111111",
+          "name_en": "Country Tomato",
+          "name_ta": "நாட்டுத் தக்காளி",
+          "unit": "Kg",
+          "qty": 2,
+          "price": 40,
+          "unavailable": false
+        },
+        {
+          "item_id": "33333333-0002-4111-8111-111111111111",
+          "name_en": "Ladies Finger (Okra)",
+          "name_ta": "வெண்டைக்காய்",
+          "unit": "Kg",
+          "qty": 1,
+          "price": 60,
+          "unavailable": true
+        },
+        {
+          "item_id": "33333333-0008-4111-8111-111111111111",
+          "name_en": "Spinach (Pasalai)",
+          "name_ta": "பசலைக்கீரை",
+          "unit": "Nos",
+          "qty": 2,
+          "price": 20,
+          "unavailable": false
+        },
+        {
+          "item_id": "33333333-0015-4111-8111-111111111111",
+          "name_en": "Fresh A2 Cow Milk",
+          "name_ta": "நாட்டுப் பசு பால்",
+          "unit": "Litre",
+          "qty": 2,
+          "price": 65,
+          "unavailable": false
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "66666666-0002-4111-8111-111111111111",
+      "order_no": "FNK-1002",
+      "cycle_id": "44444444-0001-4111-8111-111111111111",
+      "customer_id": "55555555-0002-4111-8111-111111111111",
+      "branch_id": "11111111-1111-4111-8111-111111111111",
+      "delivery_mode": "Customer Pickup",
+      "delivery_address": "",
+      "status": "Placed",
+      "created_at": "2026-08-29T05:15:48.187Z",
+      "lines": [
+        {
+          "item_id": "33333333-0003-4111-8111-111111111111",
+          "name_en": "Country Drumstick",
+          "name_ta": "நாட்டு முருங்கைக்காய்",
+          "unit": "Nos",
+          "qty": 5,
+          "price": 12
+        },
+        {
+          "item_id": "33333333-0012-4111-8111-111111111111",
+          "name_en": "Banana (Poovan)",
+          "name_ta": "பூவன் பழம்",
+          "unit": "Kg",
+          "qty": 1.5,
+          "price": 70
+        }
+      ]
+    },
+    {
+      "id": "66666666-0003-4111-8111-111111111111",
+      "order_no": "FNK-1003",
+      "cycle_id": "44444444-0001-4111-8111-111111111111",
+      "customer_id": "55555555-0003-4111-8111-111111111111",
+      "branch_id": "11111111-1111-4111-8111-111111111111",
+      "delivery_mode": "Door Delivery",
+      "delivery_address": "45 Gandhi Nagar, Erode",
+      "status": "Placed",
+      "created_at": "2026-08-29T07:15:48.187Z",
+      "lines": [
+        {
+          "item_id": "33333333-0001-4111-8111-111111111111",
+          "name_en": "Country Tomato",
+          "name_ta": "நாட்டுத் தக்காளி",
+          "unit": "Kg",
+          "qty": 1,
+          "price": 40
+        },
+        {
+          "item_id": "33333333-0018-4111-8111-111111111111",
+          "name_en": "Cold Pressed Groundnut Oil",
+          "name_ta": "மரச்செக்கு நிலக்கடலை எண்ணெய்",
+          "unit": "Litre",
+          "qty": 1,
+          "price": 320
+        }
+      ]
+    }
+  ],
+  "admin_users": [
+    {
+      "id": "a0000000-0000-4000-8000-000000000001",
+      "email": "pingnagan@gmail.com",
+      "password_hash": "Nallakadai@2026",
+      "full_name": "Nagan (Super Admin)",
+      "role": "super_admin",
+      "branch_id": null,
+      "active": true
+    },
+    {
+      "id": "a0000000-0000-4000-8000-000000000002",
+      "email": "goodshoperode@gmail.com",
+      "password_hash": "Nallakadai@2026",
+      "full_name": "Good Shop Admin",
+      "role": "super_admin",
+      "branch_id": null,
+      "active": true
+    },
+    {
+      "id": "a0000000-0000-4000-8000-000000000003",
+      "email": "erode.operator@nallakadai.in",
+      "password_hash": "Nallakadai@2026",
+      "full_name": "Erode Store Operator",
+      "role": "branch_admin",
+      "branch_id": "11111111-1111-4111-8111-111111111111",
+      "active": true
+    }
+  ],
+  "audit_logs": [],
+  "brands": [
+    {
+      "id": "b0000000-0001-4111-8111-111111111111",
+      "name": "Nalla Kadai Farm Direct",
+      "name_ta": "நல்ல கடை நேரடி பண்ணை",
+      "logo_url": "/images/logo.jpg",
+      "description": "Certified natural produce harvested directly from partner organic farmers in Erode district.",
+      "category_ids": [
+        "22222222-0001-4111-8111-111111111111",
+        "22222222-0002-4111-8111-111111111111"
+      ],
+      "active": true
+    },
+    {
+      "id": "b0000000-0002-4111-8111-111111111111",
+      "name": "Nammalvar Naturals",
+      "name_ta": "நம்மாழ்வார் இயற்கை பண்ணை",
+      "logo_url": null,
+      "description": "Native heirloom vegetables and greens cultivated using traditional Subhash Palekar ZBNF methods.",
+      "category_ids": [
+        "22222222-0001-4111-8111-111111111111",
+        "22222222-0002-4111-8111-111111111111",
+        "22222222-0003-4111-8111-111111111111"
+      ],
+      "active": true
+    },
+    {
+      "id": "b0000000-0003-4111-8111-111111111111",
+      "name": "Arogya A2 Dairy",
+      "name_ta": "ஆரோக்கியா நாட்டுப் பசு பால்",
+      "logo_url": null,
+      "description": "Pure grass-fed Kangayam and Hallikar native cow milk, curd and traditional hand-churned butter.",
+      "category_ids": [
+        "22222222-0004-4111-8111-111111111111"
+      ],
+      "active": true
+    },
+    {
+      "id": "b0000000-0004-4111-8111-111111111111",
+      "name": "Chettinad Vaagai Oils",
+      "name_ta": "செட்டிநாடு வாகை மரச்செக்கு",
+      "logo_url": null,
+      "description": "Wood cold-pressed oils made using pure Vaagai wooden churns without heat treatment.",
+      "category_ids": [
+        "22222222-0005-4111-8111-111111111111"
+      ],
+      "active": true
+    }
+  ]
+}
