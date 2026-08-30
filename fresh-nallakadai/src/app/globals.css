@@ -141,3 +141,18 @@ body {
     break-after: auto;
   }
 }
+
+/* Permanently hide Next.js floating dev indicator badge */
+nextjs-portal,
+[data-nextjs-toast],
+[data-nextjs-dev-tools],
+#nextjs-dev-tools-wrapper,
+[data-next-badge],
+.nextjs-toast-errors-parent,
+button[aria-label*="Next.js"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
