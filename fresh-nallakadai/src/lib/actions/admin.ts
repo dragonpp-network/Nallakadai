@@ -186,6 +186,7 @@ export async function getCyclesAction(userId: string = DEFAULT_SUPER_ADMIN_ID, b
     return {
       ...c,
       branches: b ? { name: b.name } : null,
+      collectionTiming: (c as any).collection_timing || b?.collection_timing || "Tuesday 7:00 AM - 10:00 AM",
     };
   });
 }
@@ -197,11 +198,13 @@ export async function createCycleAction(
     openAt: string;
     closeAt: string;
     deliveryDate: string;
+    collectionTiming?: string;
     copyFromCycleId?: string;
   }
 ) {
   await requireAdmin(userId);
   const store = getLocalStore();
+  const branch = store.branches.find((b) => b.id === data.branchId);
 
   const nextCycleNo = store.cycles.length + 1;
   const newCycle = {
@@ -211,11 +214,12 @@ export async function createCycleAction(
     open_at: data.openAt,
     close_at: data.closeAt,
     delivery_date: data.deliveryDate,
+    collection_timing: data.collectionTiming || branch?.collection_timing || "Tuesday 7:00 AM - 10:00 AM",
     status: "Open",
     manual_override: null,
   };
 
-  store.cycles.unshift(newCycle);
+  store.cycles.unshift(newCycle as any);
 
   // Copy cycle items
   const itemsToAdd = store.items.map((i) => ({
@@ -236,6 +240,36 @@ export async function createCycleAction(
   };
 }
 
+export async function updateAdminCycleAction(
+  userId: string = DEFAULT_SUPER_ADMIN_ID,
+  cycleId: string,
+  data: {
+    deliveryDate?: string;
+    closeAt?: string;
+    openAt?: string;
+    cycleNo?: number;
+    collectionTiming?: string;
+    status?: string;
+    manualOverride?: string | null;
+  }
+) {
+  await requireAdmin(userId);
+  const store = getLocalStore();
+  const cycle = store.cycles.find((c) => c.id === cycleId);
+  if (!cycle) throw new Error("Harvest cycle not found");
+
+  if (data.deliveryDate) cycle.delivery_date = data.deliveryDate;
+  if (data.closeAt) cycle.close_at = data.closeAt;
+  if (data.openAt) cycle.open_at = data.openAt;
+  if (data.cycleNo !== undefined) cycle.cycle_no = Number(data.cycleNo);
+  if (data.collectionTiming !== undefined) (cycle as any).collection_timing = data.collectionTiming;
+  if (data.status) cycle.status = data.status;
+  if (data.manualOverride !== undefined) cycle.manual_override = data.manualOverride;
+
+  saveLocalStore(store);
+  return { success: true, cycle };
+}
+
 export async function updateCycleStatusAction(
   userId: string = DEFAULT_SUPER_ADMIN_ID,
   cycleId: string,
@@ -251,6 +285,7 @@ export async function updateCycleStatusAction(
     if (updates.deliveryDate) cycle.delivery_date = updates.deliveryDate;
     if (updates.closeAt) cycle.close_at = updates.closeAt;
     if (updates.openAt) cycle.open_at = updates.openAt;
+    if (updates.collectionTiming !== undefined) (cycle as any).collection_timing = updates.collectionTiming;
     saveLocalStore(store);
   }
 
@@ -478,7 +513,11 @@ export async function markNonCollectionAction(
 /**
  * Vendor / Farm Order Cumulative Aggregation
  */
-export async function getFarmOrderAggregationAction(cycleId: string) {
+export async function getFarmOrderAggregationAction(
+  cycleId: string,
+  bufferPercent: number = 0,
+  roundUpUnit: number = 0
+) {
   const store = getLocalStore();
   const cycle = store.cycles.find((c) => c.id === cycleId) || store.cycles[0];
   const branch = store.branches.find((b) => b.id === cycle?.branch_id);
@@ -500,9 +539,9 @@ export async function getFarmOrderAggregationAction(cycleId: string) {
       const brand = store.brands.find((b) => b.id === (masterItem as any)?.brand_id);
 
       if (existing) {
-        existing.totalQty += q;
+        existing.totalDemandQty += q;
         existing.estimatedValue += q * p;
-        existing.orderCount += 1;
+        existing.customerOrderCount += 1;
       } else {
         aggregated.set(item.item_id, {
           itemId: item.item_id,
@@ -515,19 +554,32 @@ export async function getFarmOrderAggregationAction(cycleId: string) {
           categoryTint: cat?.tint || "#EAF3DD",
           categorySortOrder: cat?.sort_order || 99,
           brandName: brand?.name || "Direct Farm",
-          totalQty: q,
+          totalDemandQty: q,
           estimatedValue: q * p,
-          orderCount: 1,
+          customerOrderCount: 1,
         });
       }
     }
   }
 
-  const itemsList = Array.from(aggregated.values()).map((row) => ({
-    ...row,
-    totalQty: Math.round(row.totalQty * 100) / 100,
-    estimatedValue: Math.round(row.estimatedValue * 100) / 100,
-  }));
+  const itemsList = Array.from(aggregated.values()).map((row) => {
+    let finalProcQty = row.totalDemandQty * (1 + (bufferPercent || 0) / 100);
+    if (roundUpUnit && roundUpUnit > 0) {
+      finalProcQty = Math.ceil(finalProcQty / roundUpUnit) * roundUpUnit;
+    }
+    finalProcQty = Math.round(finalProcQty * 100) / 100;
+    const roundedDemand = Math.round(row.totalDemandQty * 100) / 100;
+
+    return {
+      ...row,
+      totalQty: roundedDemand,
+      totalDemandQty: roundedDemand,
+      customerOrderCount: row.customerOrderCount,
+      orderCount: row.customerOrderCount,
+      procurementQty: finalProcQty,
+      estimatedValue: Math.round(row.estimatedValue * 100) / 100,
+    };
+  });
 
   // Group Category-wise for Vendor Procurement
   const categoryGroupsMap = new Map<string, any>();
@@ -782,6 +834,7 @@ export async function saveAdminCouponAction(
   const discountValue = Number(couponData.discountValue || couponData.discount_value || 0);
   const minOrderValue = Number(couponData.minOrderValue || couponData.min_order_value || 0);
   const maxDiscount = Number(couponData.maxDiscount || couponData.max_discount || discountValue);
+  const showOnCart = couponData.showOnCart !== undefined ? couponData.showOnCart : (couponData.show_on_cart !== undefined ? couponData.show_on_cart : true);
 
   if (couponData.id) {
     const idx = store.coupons.findIndex((c) => c.id === couponData.id);
@@ -794,6 +847,7 @@ export async function saveAdminCouponAction(
         discount_value: discountValue,
         min_order_value: minOrderValue,
         max_discount: maxDiscount,
+        show_on_cart: showOnCart,
         active: couponData.active !== undefined ? couponData.active : true,
       };
     }
@@ -806,6 +860,7 @@ export async function saveAdminCouponAction(
       discount_value: discountValue,
       min_order_value: minOrderValue,
       max_discount: maxDiscount,
+      show_on_cart: showOnCart,
       active: couponData.active !== undefined ? couponData.active : true,
     });
   }

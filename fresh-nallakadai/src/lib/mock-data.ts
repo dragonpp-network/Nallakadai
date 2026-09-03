@@ -117,6 +117,7 @@ export const INITIAL_COUPONS = [
     discount_value: 10,
     min_order_value: 150,
     max_discount: 100,
+    show_on_cart: true,
     active: true,
   },
   {
@@ -127,6 +128,7 @@ export const INITIAL_COUPONS = [
     discount_value: 50,
     min_order_value: 400,
     max_discount: 50,
+    show_on_cart: true,
     active: true,
   },
   {
@@ -137,6 +139,7 @@ export const INITIAL_COUPONS = [
     discount_value: 25,
     min_order_value: 200,
     max_discount: 25,
+    show_on_cart: true,
     active: true,
   },
 ];
@@ -157,6 +160,7 @@ export const INITIAL_CYCLE = {
   open_at: new Date(Date.now() - 86400000).toISOString(),
   close_at: new Date(Date.now() + 5 * 86400000).toISOString(),
   delivery_date: new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0],
+  collection_timing: "Tuesday 7:00 AM - 10:00 AM",
   status: "Open",
   manual_override: null,
 };

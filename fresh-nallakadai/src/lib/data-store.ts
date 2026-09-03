@@ -150,6 +150,17 @@ export function getLocalStore(): StoreState {
     if (!parsed.brands) parsed.brands = [...INITIAL_BRANDS];
     if (!parsed.coupons) parsed.coupons = [...INITIAL_COUPONS];
 
+    for (const c of parsed.coupons || []) {
+      if (c.show_on_cart === undefined) c.show_on_cart = true;
+    }
+
+    for (const cy of parsed.cycles || []) {
+      if (cy.collection_timing === undefined) {
+        const branch = (parsed.branches || []).find((b: any) => b.id === cy.branch_id);
+        cy.collection_timing = branch?.collection_timing || "Tuesday 7:00 AM - 10:00 AM";
+      }
+    }
+
     for (const item of parsed.items || []) {
       if (item.procurement_cost === undefined) item.procurement_cost = Math.round(item.price * 0.7);
       if (item.selling_price === undefined) item.selling_price = item.price;
