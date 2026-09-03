@@ -44,6 +44,7 @@ export default function AdminCouponsPage() {
   const [discountValue, setDiscountValue] = useState<number>(10);
   const [minOrderValue, setMinOrderValue] = useState<number>(150);
   const [maxDiscount, setMaxDiscount] = useState<number>(100);
+  const [showOnCart, setShowOnCart] = useState<boolean>(true);
   const [active, setActive] = useState<boolean>(true);
 
   useEffect(() => {
@@ -70,6 +71,7 @@ export default function AdminCouponsPage() {
     setDiscountValue(10);
     setMinOrderValue(150);
     setMaxDiscount(100);
+    setShowOnCart(true);
     setActive(true);
     setModalOpen(true);
   }
@@ -82,6 +84,7 @@ export default function AdminCouponsPage() {
     setDiscountValue(Number(coupon.discount_value));
     setMinOrderValue(Number(coupon.min_order_value || 0));
     setMaxDiscount(Number(coupon.max_discount || coupon.discount_value));
+    setShowOnCart(coupon.show_on_cart !== false);
     setActive(coupon.active !== false);
     setModalOpen(true);
   }
@@ -97,6 +100,7 @@ export default function AdminCouponsPage() {
         discountValue,
         minOrderValue,
         maxDiscount,
+        showOnCart,
         active,
       });
 
@@ -178,13 +182,23 @@ export default function AdminCouponsPage() {
                       {c.discount_type === "percentage" ? <Percent className="h-5 w-5" /> : <Tag className="h-5 w-5" />}
                     </div>
                     <div>
-                      <div className="font-mono text-lg font-extrabold text-foreground tracking-wider flex items-center gap-1.5">
+                      <div className="font-mono text-lg font-extrabold text-foreground tracking-wider flex items-center gap-1.5 flex-wrap">
                         <span>{c.code}</span>
                         <Badge
                           variant={c.active ? "default" : "secondary"}
                           className="text-[10px] py-0 px-1.5"
                         >
                           {c.active ? "Active" : "Inactive"}
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] py-0 px-1.5 ${
+                            c.show_on_cart !== false
+                              ? "border-emerald-600/30 text-emerald-700 bg-emerald-500/10"
+                              : "border-purple-600/30 text-purple-700 bg-purple-500/10"
+                          }`}
+                        >
+                          {c.show_on_cart !== false ? "Public (Cart)" : "Private (Code Only)"}
                         </Badge>
                       </div>
                       <span className="text-xs text-primary font-bold">
@@ -334,17 +348,32 @@ export default function AdminCouponsPage() {
               )}
             </div>
 
-            <div className="flex items-center gap-2 pt-1">
-              <input
-                type="checkbox"
-                id="couponActive"
-                checked={active}
-                onChange={(e) => setActive(e.target.checked)}
-                className="h-4 w-4 rounded accent-primary"
-              />
-              <Label htmlFor="couponActive" className="text-xs font-semibold">
-                Active & Redeemable by Customers
-              </Label>
+            <div className="space-y-2 pt-1 border-t">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="couponShowOnCart"
+                  checked={showOnCart}
+                  onChange={(e) => setShowOnCart(e.target.checked)}
+                  className="h-4 w-4 rounded accent-primary"
+                />
+                <Label htmlFor="couponShowOnCart" className="text-xs font-semibold cursor-pointer">
+                  Show on Storefront Cart (Public Suggestion Pill)
+                </Label>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="couponActive"
+                  checked={active}
+                  onChange={(e) => setActive(e.target.checked)}
+                  className="h-4 w-4 rounded accent-primary"
+                />
+                <Label htmlFor="couponActive" className="text-xs font-semibold cursor-pointer">
+                  Active & Redeemable by Customers
+                </Label>
+              </div>
             </div>
 
             <Button type="submit" className="w-full rounded-2xl bg-primary text-white font-bold h-12 mt-4 shadow">

@@ -626,24 +626,26 @@ export default function StorefrontPage() {
                   இயற்கை முறையில் விளைவிக்கப்பட்ட காய்கறிகள், கீரைகள் மற்றும் பால் பொருட்கள்.
                 </p>
 
-                <div className="pt-2 flex flex-wrap gap-2.5">
-                  <Button
-                    onClick={() => setActiveTab("order")}
-                    className="rounded-2xl bg-gold hover:bg-gold/90 text-maroon-dark font-bold text-sm h-11 px-5 shadow-lg flex items-center gap-2"
-                  >
-                    <ShoppingBag className="h-4 w-4" /> Start Ordering Now →
-                  </Button>
-
-                  {mostRecentPastOrder && (
+                {!activePlacedOrder && (
+                  <div className="pt-2 flex flex-wrap gap-2.5">
                     <Button
-                      variant="outline"
-                      onClick={() => handleRepeatOrder(mostRecentPastOrder)}
-                      className="rounded-2xl border-white/30 bg-white/10 hover:bg-white/20 text-white font-semibold text-xs h-11 px-4 backdrop-blur-md flex items-center gap-1.5"
+                      onClick={() => setActiveTab("order")}
+                      className="rounded-2xl bg-gold hover:bg-gold/90 text-maroon-dark font-bold text-sm h-11 px-5 shadow-lg flex items-center gap-2"
                     >
-                      <RotateCcw className="h-3.5 w-3.5" /> Repeat Last Order
+                      <ShoppingBag className="h-4 w-4" /> Start Ordering Now →
                     </Button>
-                  )}
-                </div>
+
+                    {mostRecentPastOrder && (
+                      <Button
+                        variant="outline"
+                        onClick={() => handleRepeatOrder(mostRecentPastOrder)}
+                        className="rounded-2xl border-white/30 bg-white/10 hover:bg-white/20 text-white font-semibold text-xs h-11 px-4 backdrop-blur-md flex items-center gap-1.5"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" /> Repeat Last Order
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -678,6 +680,12 @@ export default function StorefrontPage() {
                     <span>Expected Date:</span>
                     <span className="font-semibold text-primary">{lookup.cycle.deliveryDate || "Scheduled Date"}</span>
                   </div>
+                  {lookup.branch?.collectionTiming && activePlacedOrder.delivery_mode === "Customer Pickup" && (
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Pickup Window:</span>
+                      <span className="font-semibold text-primary">{lookup.branch.collectionTiming}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 pt-1">
@@ -697,49 +705,6 @@ export default function StorefrontPage() {
                   >
                     <XCircle className="h-3.5 w-3.5 mr-1" /> Cancel
                   </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Partner Brands Showcase */}
-            {storeData?.brands && storeData.brands.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-serif font-bold text-lg text-foreground">Our Farm Partners & Brands</h3>
-                  <span className="text-xs text-muted-foreground">{storeData.brands.length} Organic Partners</span>
-                </div>
-
-                <div className="no-scrollbar flex gap-3 overflow-x-auto pb-1">
-                  {storeData.brands.map((brand: any) => (
-                    <button
-                      key={brand.id}
-                      type="button"
-                      onClick={() => {
-                        setActiveBrand(brand.id);
-                        setActiveCategory("all");
-                        setActiveTab("order");
-                      }}
-                      className="p-3.5 rounded-3xl border bg-card text-left shadow-sm hover:shadow-md transition shrink-0 w-44 flex flex-col justify-between gap-2.5 group"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <GenericProduceImage
-                          src={brand.logo_url}
-                          alt={brand.name}
-                          fallbackType="brand"
-                          className="h-10 w-10 rounded-2xl object-cover border shadow-sm shrink-0"
-                        />
-                        <div className="overflow-hidden">
-                          <div className="font-bold text-xs text-foreground truncate group-hover:text-primary transition">
-                            {brand.name}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground font-tamil truncate">{brand.name_ta}</div>
-                        </div>
-                      </div>
-                      <div className="text-[10px] text-primary font-semibold flex items-center gap-1">
-                        View Products →
-                      </div>
-                    </button>
-                  ))}
                 </div>
               </div>
             )}
@@ -849,38 +814,6 @@ export default function StorefrontPage() {
               )}
             </div>
 
-            {/* Brand Filter Pills */}
-            {storeData?.brands && storeData.brands.length > 0 && (
-              <div className="no-scrollbar flex gap-1.5 overflow-x-auto pb-0.5">
-                <button
-                  type="button"
-                  onClick={() => setActiveBrand("all")}
-                  className={`rounded-xl px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition border ${
-                    activeBrand === "all"
-                      ? "bg-amber-600 text-white border-amber-600 shadow-sm"
-                      : "bg-card text-muted-foreground border-border hover:bg-muted"
-                  }`}
-                >
-                  All Brands
-                </button>
-                {storeData.brands.map((b: any) => (
-                  <button
-                    key={b.id}
-                    type="button"
-                    onClick={() => setActiveBrand(b.id)}
-                    className={`rounded-xl px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition border flex items-center gap-1.5 ${
-                      activeBrand === b.id
-                        ? "bg-amber-600 text-white border-amber-600 shadow-sm"
-                        : "bg-card text-muted-foreground border-border hover:bg-muted"
-                    }`}
-                  >
-                    <Award className="h-3 w-3" />
-                    <span>{b.name}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-
             {/* Category Filter Pills */}
             <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
               <button
@@ -917,15 +850,39 @@ export default function StorefrontPage() {
               })}
             </div>
 
+            {/* Sticky Floating View Cart & Checkout Bar */}
+            {cartLines.length > 0 && (
+              <div className="sticky top-16 z-30 my-1 animate-in slide-in-from-top-2 duration-200">
+                <div className="rounded-2xl bg-gradient-to-r from-primary to-maroon-dark text-white p-3 px-4 shadow-xl flex items-center justify-between gap-3 border border-white/20">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-8 w-8 rounded-xl bg-white/20 flex items-center justify-center font-bold font-mono text-xs">
+                      {cartLines.length}
+                    </div>
+                    <div>
+                      <div className="text-[11px] opacity-90">{cartLines.length} items in your basket</div>
+                      <div className="text-xs font-bold font-mono">₹{subtotalAmount.toFixed(2)}</div>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={() => setActiveTab("cart")}
+                    className="rounded-xl bg-gold hover:bg-gold/90 text-maroon-dark font-bold text-xs h-9 px-3.5 shadow"
+                  >
+                    View Cart & Checkout →
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Categorized Produce List */}
             {storeLoading ? (
               <div className="py-16 text-center text-sm text-muted-foreground flex flex-col items-center justify-center gap-2">
-                <LottieAnimation className="w-36 h-36" />
+                <div className="h-10 w-10 rounded-full border-3 border-primary border-t-transparent animate-spin" />
                 <span className="font-tamil text-xs">அறுவடை பொருட்கள் பட்டியல் ஏற்றப்படுகிறது...</span>
               </div>
             ) : filteredItems.length === 0 ? (
               <div className="rounded-3xl bg-card p-10 text-center text-muted-foreground border shadow-sm">
-                No produce found matching your filters.
+                No produce found matching your search.
               </div>
             ) : (
               <div className="space-y-3">
@@ -955,13 +912,6 @@ export default function StorefrontPage() {
                               )}
                             </div>
                             <p className="text-sm font-tamil text-muted-foreground mt-0.5">{item.nameTa}</p>
-
-                            {item.brand && (
-                              <div className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-amber-900 bg-amber-500/10 px-2 py-0.5 rounded-lg">
-                                <Award className="h-3 w-3 text-amber-600" />
-                                <span>{item.brand.name}</span>
-                              </div>
-                            )}
 
                             {lookup.branch.showPrices && (
                               <div className="mt-1.5 flex items-baseline gap-1.5 flex-wrap">
@@ -1037,6 +987,19 @@ export default function StorefrontPage() {
                     </div>
                   );
                 })}
+
+                {/* Bottom Proceed to Cart Button */}
+                {cartLines.length > 0 && (
+                  <div className="pt-4 pb-2">
+                    <Button
+                      onClick={() => setActiveTab("cart")}
+                      className="w-full h-12 rounded-2xl bg-primary hover:bg-primary/95 text-white font-bold text-sm shadow-lg gap-2"
+                    >
+                      <ShoppingBag className="h-4 w-4" />
+                      Proceed to Cart & Review Order ({cartLines.length} Items • ₹{subtotalAmount.toFixed(2)}) →
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1545,7 +1508,12 @@ export default function StorefrontPage() {
         }}
       >
         <DialogContent className="rounded-3xl max-w-sm text-center">
-          <LottieAnimation className="w-36 h-36 mx-auto" />
+          <div className="relative mx-auto my-2 flex h-24 w-24 items-center justify-center">
+            <div className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping opacity-75" />
+            <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-emerald-600 text-white shadow-xl shadow-emerald-600/30">
+              <Check className="h-10 w-10 stroke-[3.5] animate-in zoom-in-50 duration-300" />
+            </div>
+          </div>
 
           <DialogTitle className="font-serif text-2xl font-bold text-foreground">
             {confirmedOrderDetails?.isUpdate ? "Order Updated!" : "Order Confirmed!"}

@@ -71,15 +71,23 @@ export async function lookupCustomerAction(rawPhone: string): Promise<LookupResu
   }
 
   // 4. Branch Lookup
-  const branch = store.branches.find((b) => b.id === customer.branch_id) || store.branches[0];
+  const branch = store.branches.find((b) => b.id === customer.branch_id && b.active);
 
-  // 5. Active Cycle Lookup
-  const cycle = store.cycles.find((c) => c.branch_id === branch.id) || store.cycles[0];
-
-  if (!cycle || !isCycleOpen(cycle as any)) {
+  if (!branch) {
     return {
       status: "closed",
-      nextOpening: branch.next_opening_note,
+      nextOpening: "Your branch is currently inactive. Please contact support.",
+      support: "919489581122",
+    };
+  }
+
+  // 5. Strict Active Cycle Lookup for this branch ONLY (No generic fallback to other branches)
+  const cycle = store.cycles.find((c) => c.branch_id === branch.id && isCycleOpen(c as any));
+
+  if (!cycle) {
+    return {
+      status: "closed",
+      nextOpening: branch.next_opening_note || `${branch.name} weekly harvest ordering is currently closed. Next round will open soon.`,
       support: branch.support_number || branch.whatsapp_number,
     };
   }
@@ -99,7 +107,7 @@ export async function lookupCustomerAction(rawPhone: string): Promise<LookupResu
       name: branch.name,
       showPrices: branch.show_prices,
       pickupAddress: branch.pickup_address,
-      collectionTiming: branch.collection_timing,
+      collectionTiming: (cycle as any).collection_timing || branch.collection_timing || "Tuesday 7:00 AM - 10:00 AM",
     },
     cycle: {
       id: cycle.id,
@@ -119,52 +127,54 @@ export async function getStoreCatalogAction(rawPhone: string) {
   const store = getLocalStore();
 
   const customer = store.customers.find((c) => normaliseMobile(c.mobile) === mobile);
-  const branch = store.branches.find((b) => b.id === customer?.branch_id) || store.branches[0];
-  const cycle = store.cycles.find((c) => c.branch_id === branch.id) || store.cycles[0];
+  const branch = store.branches.find((b) => b.id === customer?.branch_id && b.active);
+  const cycle = branch ? store.cycles.find((c) => c.branch_id === branch.id && isCycleOpen(c as any)) : null;
 
   // Active Cycle Items
   const cycleItemMap = new Map(
-    store.cycle_items.filter((ci) => ci.cycle_id === cycle?.id).map((ci) => [ci.item_id, ci])
+    cycle ? store.cycle_items.filter((ci) => ci.cycle_id === cycle.id).map((ci) => [ci.item_id, ci]) : []
   );
 
-  const catalogItems = store.items
-    .filter((item) => item.active)
-    .map((item) => {
-      const ci = cycleItemMap.get(item.id);
-      const brand = store.brands.find((b) => b.id === (item as any).brand_id);
-      return {
-        itemId: item.id,
-        nameEn: item.name_en,
-        nameTa: item.name_ta,
-        categoryId: item.category_id,
-        brandId: (item as any).brand_id || null,
-        brand: brand ? { id: brand.id, name: brand.name, nameTa: brand.name_ta, logoUrl: brand.logo_url } : null,
-        imageUrl: (item as any).image_url || null,
-        unit: item.unit,
-        presets: item.presets,
-        minQty: ci?.min_qty ?? item.min_qty,
-        maxQty: ci?.max_qty ?? item.max_qty,
-        procurementCost: ci?.procurement_cost ?? item.procurement_cost,
-        sellingPrice: ci?.selling_price ?? item.selling_price,
-        discountPercent: ci?.discount_percent ?? item.discount_percent,
-        price: ci ? ci.price : item.price,
-        soldOut: false,
-      };
-    });
+  const catalogItems = cycle
+    ? store.items
+        .filter((item) => item.active)
+        .map((item) => {
+          const ci = cycleItemMap.get(item.id);
+          const brand = store.brands.find((b) => b.id === (item as any).brand_id);
+          return {
+            itemId: item.id,
+            nameEn: item.name_en,
+            nameTa: item.name_ta,
+            categoryId: item.category_id,
+            brandId: (item as any).brand_id || null,
+            brand: brand ? { id: brand.id, name: brand.name, nameTa: brand.name_ta, logoUrl: brand.logo_url } : null,
+            imageUrl: (item as any).image_url || null,
+            unit: item.unit,
+            presets: item.presets,
+            minQty: ci?.min_qty ?? item.min_qty,
+            maxQty: ci?.max_qty ?? item.max_qty,
+            procurementCost: ci?.procurement_cost ?? item.procurement_cost,
+            sellingPrice: ci?.selling_price ?? item.selling_price,
+            discountPercent: ci?.discount_percent ?? item.discount_percent,
+            price: ci ? ci.price : item.price,
+            soldOut: false,
+          };
+        })
+    : [];
 
   // Fetch Current & Previous Orders for customer
   const custOrders = customer
     ? store.orders.filter((o) => o.customer_id === customer.id).sort((a, b) => (b.created_at > a.created_at ? 1 : -1))
     : [];
 
-  const currentOrder = custOrders.find((o) => o.cycle_id === cycle?.id && o.status === "Placed");
+  const currentOrder = cycle ? custOrders.find((o) => o.cycle_id === cycle.id && o.status === "Placed") : null;
   const previousOrder = custOrders.find((o) => o.cycle_id !== cycle?.id && o.status === "Placed");
 
   return {
     cycleId: cycle?.id,
     categories: store.categories.filter((c) => c.active),
     brands: store.brands.filter((b) => b.active),
-    coupons: (store.coupons || []).filter((cp: any) => cp.active),
+    coupons: (store.coupons || []).filter((cp: any) => cp.active && cp.show_on_cart !== false),
     items: catalogItems,
     currentOrder: currentOrder
       ? {

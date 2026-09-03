@@ -223,13 +223,16 @@ export default function AdminBranchesPage() {
             </div>
 
             <div>
-              <Label className="text-xs">Collection Timing Window</Label>
+              <Label className="text-xs font-semibold">Default Collection Timing Window</Label>
               <Input
                 value={collectionTiming}
                 onChange={(e) => setCollectionTiming(e.target.value)}
-                placeholder="e.g. Tuesday 8:00 AM – 12:00 PM"
+                placeholder="e.g. Tuesday 7:00 AM – 10:00 AM | Friday 8:00 AM – 12:00 PM"
                 className="mt-1 rounded-xl text-sm"
               />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Default timing for pickup orders. Individual harvest cycles can also override timing per round.
+              </p>
             </div>
 
             <div>

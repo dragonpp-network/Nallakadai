@@ -5,17 +5,15 @@ import { getCyclesAction, getFarmOrderAggregationAction } from "@/lib/actions/ad
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import {
   Download,
   Printer,
-  Tractor,
   Layers,
   MessageSquare,
-  Copy,
-  ShoppingBag,
-  ExternalLink,
-  Store,
   FolderTree,
+  SlidersHorizontal,
+  TrendingUp,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -23,6 +21,8 @@ import { toast } from "sonner";
 export default function AdminVendorOrderPage() {
   const [cycles, setCycles] = useState<any[]>([]);
   const [selectedCycleId, setSelectedCycleId] = useState<string>("");
+  const [bufferPercent, setBufferPercent] = useState<number>(0);
+  const [roundUpUnit, setRoundUpUnit] = useState<number>(0);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedCategoryTab, setSelectedCategoryTab] = useState<string>("all");
@@ -32,8 +32,8 @@ export default function AdminVendorOrderPage() {
   }, []);
 
   useEffect(() => {
-    if (selectedCycleId) loadVendorOrder(selectedCycleId);
-  }, [selectedCycleId]);
+    if (selectedCycleId) loadVendorOrder(selectedCycleId, bufferPercent, roundUpUnit);
+  }, [selectedCycleId, bufferPercent, roundUpUnit]);
 
   async function loadCycles() {
     try {
@@ -45,10 +45,10 @@ export default function AdminVendorOrderPage() {
     }
   }
 
-  async function loadVendorOrder(cycleId: string) {
+  async function loadVendorOrder(cycleId: string, buffer: number, roundUp: number) {
     setLoading(true);
     try {
-      const res = await getFarmOrderAggregationAction(cycleId);
+      const res = await getFarmOrderAggregationAction(cycleId, buffer, roundUp);
       setData(res);
     } catch (err: any) {
       toast.error("Failed to aggregate vendor procurement order");
@@ -68,12 +68,15 @@ export default function AdminVendorOrderPage() {
       "Category (Tamil)": i.categoryTa,
       "Produce Item (English)": i.nameEn,
       "Produce Item (Tamil)": i.nameTa,
-      "Total Procurement Quantity": `${i.totalQty} ${i.unit}`,
-      Unit: i.unit,
-      "Quantity Value": i.totalQty,
-      "Orders Requesting": i.orderCount,
+      "Customer Demand (Ordered)": `${i.totalDemandQty} ${i.unit}`,
+      "Unit": i.unit,
+      "Customer Demand Value": i.totalDemandQty,
+      "Customer Orders Count": i.customerOrderCount,
+      "Buffer Applied (%)": `${bufferPercent}%`,
+      "Final Procurement Order": `${i.procurementQty} ${i.unit}`,
+      "Final Procurement Value": i.procurementQty,
       "Brand / Partner": i.brandName,
-      "Estimated Procurement Total (₹)": i.estimatedValue,
+      "Estimated Value (₹)": i.estimatedValue,
     }));
 
     const ws = XLSX.utils.json_to_sheet(rows);
@@ -97,20 +100,24 @@ export default function AdminVendorOrderPage() {
 
     let text = `📦 *Fresh Nalla Kadai — Vendor Procurement Order*\n`;
     text += `🏬 Branch: ${branchName} | Cycle #${cycleNo}\n`;
-    text += `📅 Required for Harvest/Delivery: ${deliveryDate}\n\n`;
+    text += `📅 Harvest & Dispatch Date: ${deliveryDate}\n`;
+    if (bufferPercent > 0) {
+      text += `🛡️ Includes ${bufferPercent}% safety buffer on demand.\n`;
+    }
+    text += `\n`;
 
     const targetGroups = group ? [group] : data?.categoryGroups || [];
 
     for (const cat of targetGroups) {
       text += `*--- [ ${cat.categoryName} (${cat.categoryNameTa}) ] ---*\n`;
       for (const item of cat.items) {
-        text += `• *${item.nameEn}* (${item.nameTa}): *${item.totalQty} ${item.unit}*  _(Requested in ${item.orderCount} orders)_\n`;
+        text += `• *${item.nameEn}* (${item.nameTa}): *${item.procurementQty} ${item.unit}*  _(Demand: ${item.totalDemandQty} ${item.unit} across ${item.customerOrderCount} orders)_\n`;
       }
       text += `\n`;
     }
 
-    text += `Total Varieties: ${data?.distinctItemCount} produce lines across ${data?.totalOrders} customer orders.\n`;
-    text += `Please harvest fresh on Monday for Tuesday dispatch.`;
+    text += `Total: ${data?.distinctItemCount} produce lines for ${data?.totalOrders} customer orders.\n`;
+    text += `Please harvest fresh on Monday evening for Tuesday early morning dispatch.`;
 
     const encoded = encodeURIComponent(text);
     window.open(`https://wa.me/?text=${encoded}`, "_blank");
@@ -131,7 +138,7 @@ export default function AdminVendorOrderPage() {
         <div>
           <h1 className="text-2xl font-serif font-bold text-foreground">Vendor Procurement Order</h1>
           <p className="text-xs text-muted-foreground">
-            Category-wise aggregated customer demands to procure farm-fresh items ready for dispatch
+            Category-wise aggregated customer demands with safety buffer tools for farm procurement
           </p>
         </div>
 
@@ -165,6 +172,63 @@ export default function AdminVendorOrderPage() {
         </div>
       </div>
 
+      {/* Interactive Safety Buffer & Round-up Control Panel */}
+      <div className="no-print rounded-3xl bg-card border p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-2.5">
+          <div className="h-9 w-9 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+            <SlidersHorizontal className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="text-xs font-bold text-foreground">Procurement Buffer & Round-Up Tool</h3>
+            <p className="text-[11px] text-muted-foreground">
+              Add safety margin for shrinkage/wastage or round up to crate/bundle units.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1.5 bg-muted/60 p-1 rounded-2xl border">
+            <span className="text-[11px] font-semibold px-2 text-muted-foreground">Buffer Margin:</span>
+            {[0, 5, 10, 15].map((pct) => (
+              <button
+                key={pct}
+                type="button"
+                onClick={() => setBufferPercent(pct)}
+                className={`text-xs px-2.5 py-1 rounded-xl font-bold transition ${
+                  bufferPercent === pct
+                    ? "bg-primary text-white shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {pct === 0 ? "Exact (0%)" : `+${pct}%`}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1.5 bg-muted/60 p-1 rounded-2xl border">
+            <span className="text-[11px] font-semibold px-2 text-muted-foreground">Round Up:</span>
+            {[
+              { label: "None", val: 0 },
+              { label: "0.5 Unit", val: 0.5 },
+              { label: "1.0 Unit", val: 1 },
+            ].map((r) => (
+              <button
+                key={r.val}
+                type="button"
+                onClick={() => setRoundUpUnit(r.val)}
+                className={`text-xs px-2.5 py-1 rounded-xl font-bold transition ${
+                  roundUpUnit === r.val
+                    ? "bg-olive text-white shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {loading ? (
         <div className="p-12 text-center text-muted-foreground animate-pulse">Aggregating vendor demand...</div>
       ) : !items || items.length === 0 ? (
@@ -184,8 +248,10 @@ export default function AdminVendorOrderPage() {
               <strong className="text-xl font-bold text-primary">{distinctItemCount} Varieties</strong>
             </Card>
             <Card className="p-4 rounded-3xl border bg-card shadow-sm">
-              <span className="text-xs text-muted-foreground block">Produce Categories</span>
-              <strong className="text-xl font-bold text-olive">{categoryGroups?.length || 0} Categories</strong>
+              <span className="text-xs text-muted-foreground block">Buffer Setting</span>
+              <strong className="text-xl font-bold text-olive">
+                {bufferPercent > 0 ? `+${bufferPercent}% Buffer` : "Exact Demand"}
+              </strong>
             </Card>
             <Card className="p-4 rounded-3xl border bg-card shadow-sm">
               <span className="text-xs text-muted-foreground block">Est. Procurement Total</span>
@@ -227,7 +293,7 @@ export default function AdminVendorOrderPage() {
             ))}
           </div>
 
-          {/* Print Sheet Header */}
+          {/* Sheet Body */}
           <div className="rounded-3xl border bg-card p-6 shadow-sm space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4 gap-2">
               <div>
@@ -236,7 +302,7 @@ export default function AdminVendorOrderPage() {
                   <Badge className="bg-olive text-white text-xs">{cycle?.branches?.name} Branch</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground font-tamil mt-0.5">
-                  விற்பனையாளர் மற்றும் விவசாயிகள் கொள்முதல் பட்டியல் (Cycle #{cycle?.cycle_no})
+                  விவசாயிகள் மற்றும் விற்பனையாளர் கொள்முதல் பட்டியல் (Cycle #{cycle?.cycle_no})
                 </p>
               </div>
               <div className="text-right text-xs text-muted-foreground bg-muted/50 p-3 rounded-2xl border">
@@ -286,9 +352,10 @@ export default function AdminVendorOrderPage() {
                           <th className="py-3 px-4">#</th>
                           <th className="py-3 px-4">Produce Item</th>
                           <th className="py-3 px-4 font-tamil">பொருள் பெயர்</th>
-                          <th className="py-3 px-4">Brand / Partner</th>
-                          <th className="py-3 px-4 text-right">Orders Requesting</th>
-                          <th className="py-3 px-4 text-right font-bold">Total Procurement Quantity</th>
+                          <th className="py-3 px-4">Brand / Sourcing</th>
+                          <th className="py-3 px-4 text-center">Customer Orders Count</th>
+                          <th className="py-3 px-4 text-right">Customer Demand</th>
+                          <th className="py-3 px-4 text-right font-bold text-primary">Final Procurement Order</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border/60">
@@ -306,12 +373,17 @@ export default function AdminVendorOrderPage() {
                                 "Direct Farm"
                               )}
                             </td>
-                            <td className="py-3 px-4 text-right text-xs">
-                              <span className="font-semibold text-muted-foreground">{row.orderCount}</span> orders
+                            <td className="py-3 px-4 text-center text-xs">
+                              <span className="font-semibold text-foreground bg-muted/80 px-2 py-0.5 rounded-md font-mono">
+                                {row.customerOrderCount}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-right text-xs text-muted-foreground font-mono font-medium">
+                              {row.totalDemandQty} {row.unit}
                             </td>
                             <td className="py-3 px-4 text-right">
                               <span className="inline-flex items-center px-3 py-1 rounded-xl bg-primary/10 text-primary font-bold text-base font-mono">
-                                {row.totalQty} {row.unit}
+                                {row.procurementQty} {row.unit}
                               </span>
                             </td>
                           </tr>
