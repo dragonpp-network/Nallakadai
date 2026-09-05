@@ -269,7 +269,7 @@ export async function submitCustomerOrderAction(data: {
   note?: string;
   couponCode?: string;
   discountAmount?: number;
-  lines: { itemId: string; qty: number }[];
+  lines: { itemId: string; packSize?: number; packCount?: number; qty?: number; lineTotal?: number }[];
 }) {
   const mobile = normaliseMobile(data.mobile);
   const store = getLocalStore();
@@ -290,17 +290,23 @@ export async function submitCustomerOrderAction(data: {
   );
 
   const orderLines = data.lines
-    .filter((l) => l.qty > 0)
+    .filter((l) => (l.packCount ? l.packCount > 0 : (l.qty || 0) > 0))
     .map((l) => {
       const item = store.items.find((i) => i.id === l.itemId);
       if (!item) throw new Error(`Produce item ${l.itemId} not found.`);
+      const packSize = Number(l.packSize || item.presets?.[0] || l.qty || 1);
+      const packCount = Number(l.packCount || 1);
+      const totalQty = Number(l.qty !== undefined ? l.qty : packCount * packSize);
       return {
         item_id: item.id,
         name_en: item.name_en,
         name_ta: item.name_ta,
         unit: item.unit,
-        qty: l.qty,
+        pack_size: packSize,
+        pack_count: packCount,
+        qty: totalQty,
         price: item.price,
+        line_total: l.lineTotal !== undefined ? l.lineTotal : totalQty * item.price,
       };
     });
 
