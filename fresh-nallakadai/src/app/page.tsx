@@ -481,6 +481,7 @@ export default function StorefrontPage() {
         note,
         couponCode: appliedCoupon?.code,
         discountAmount: discountAmount,
+        isEditingOrder: Boolean(editingOrderNo),
         lines: cartLines.map((l) => ({
           itemId: l.item.itemId,
           packSize: l.packSize,
@@ -914,6 +915,25 @@ export default function StorefrontPage() {
         {/* ========================================================================= */}
         {activeTab === "order" && (
           <div className="space-y-4 animate-in fade-in duration-200">
+            {/* Active Edit Mode Notification Banner */}
+            {editingOrderNo && (
+              <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 p-3 px-4 text-xs text-amber-950 flex items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-2">
+                  <Edit3 className="h-4 w-4 shrink-0 text-amber-700" />
+                  <span>
+                    Editing Order <strong>{editingOrderNo}</strong>: Select items below to add them to your order.
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => setActiveTab("cart")}
+                  className="rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs h-8 px-3 shrink-0 shadow-xs"
+                >
+                  View Cart ({cartLines.length}) →
+                </Button>
+              </div>
+            )}
+
             {/* Search Bar & Repeat Last Order */}
             <div className="flex gap-2">
               <div className="relative flex-1">
@@ -1397,23 +1417,33 @@ export default function StorefrontPage() {
 
             {/* Editing Active Order Banner */}
             {editingOrderNo && (
-              <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 p-3.5 text-xs text-amber-900 flex items-center justify-between gap-2">
+              <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 p-3.5 text-xs text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs">
                 <div className="flex items-center gap-2">
                   <Edit3 className="h-4 w-4 shrink-0 text-amber-700" />
                   <span>
                     Editing active order <strong>{editingOrderNo}</strong>.
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingOrderNo(null);
-                    setCart({});
-                  }}
-                  className="text-[11px] underline text-amber-800 hover:text-black font-semibold"
-                >
-                  Cancel Edit
-                </button>
+                <div className="flex items-center gap-2 self-end sm:self-auto">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setActiveTab("order")}
+                    className="rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs h-7 px-2.5 shadow-xs gap-1"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Add Items
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingOrderNo(null);
+                      setCart({});
+                    }}
+                    className="text-[11px] underline text-amber-800 hover:text-black font-semibold px-1"
+                  >
+                    Cancel Edit
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1429,7 +1459,7 @@ export default function StorefrontPage() {
                     onClick={() => setActiveTab("order")}
                     className="rounded-2xl bg-primary text-white font-bold text-xs h-11 px-6 shadow-md"
                   >
-                    Browse Produce Catalog →
+                    {editingOrderNo ? "Browse Catalog to Add Items →" : "Browse Produce Catalog →"}
                   </Button>
                   {mostRecentPastOrder && (
                     <Button
@@ -1501,6 +1531,18 @@ export default function StorefrontPage() {
                       </div>
                     </div>
                   ))}
+
+                  {/* + Add More Items Button */}
+                  <div className="pt-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setActiveTab("order")}
+                      className="w-full h-11 rounded-2xl border-2 border-dashed border-primary/30 text-primary hover:bg-primary/5 font-bold text-xs gap-1.5 shadow-xs"
+                    >
+                      <Plus className="h-4 w-4" /> + Add More Produce Items / பொருட்களை சேர்க்க
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Coupon Code Redemption Box */}
