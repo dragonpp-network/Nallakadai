@@ -1212,9 +1212,16 @@ export async function saveBranchAction(
   if (branchData.id) {
     const idx = store.branches.findIndex((b) => b.id === branchData.id);
     if (idx >= 0) {
+      const code = (branchData.code || branchData.orderPrefix || store.branches[idx].code || branchData.name.slice(0, 3)).toUpperCase().trim();
+      const orderPrefix = (branchData.orderPrefix || branchData.code || store.branches[idx].order_prefix || code).toUpperCase().trim();
+      const nextOrderNumber = Number(branchData.nextOrderNumber !== undefined ? branchData.nextOrderNumber : (store.branches[idx].next_order_number || 1001));
+
       store.branches[idx] = {
         ...store.branches[idx],
         name: branchData.name,
+        code,
+        order_prefix: orderPrefix,
+        next_order_number: nextOrderNumber,
         address: branchData.address,
         whatsapp_number: branchData.whatsappNumber,
         support_number: branchData.supportNumber,
@@ -1227,9 +1234,16 @@ export async function saveBranchAction(
       };
     }
   } else {
+    const code = (branchData.code || branchData.orderPrefix || branchData.name.slice(0, 3)).toUpperCase().trim();
+    const orderPrefix = (branchData.orderPrefix || branchData.code || code).toUpperCase().trim();
+    const nextOrderNumber = Number(branchData.nextOrderNumber || 1001);
+
     store.branches.push({
       id: crypto.randomUUID(),
       name: branchData.name,
+      code,
+      order_prefix: orderPrefix,
+      next_order_number: nextOrderNumber,
       address: branchData.address,
       whatsapp_number: branchData.whatsappNumber,
       support_number: branchData.supportNumber,
