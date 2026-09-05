@@ -305,7 +305,7 @@ export default function StorefrontPage() {
   function handleSelectPack(itemId: string, packOptionOrSize: any, itemMeta: any) {
     setCart((prev: any) => {
       const existing = prev[itemId];
-      const packCount = existing && existing.packCount > 0 ? existing.packCount : 1;
+      const packCount = existing && existing.packCount > 0 ? existing.packCount : 0;
       
       let packSize: number;
       let packPrice: number;
@@ -313,7 +313,7 @@ export default function StorefrontPage() {
 
       if (typeof packOptionOrSize === "object" && packOptionOrSize !== null) {
         packSize = Number(packOptionOrSize.qty || 1);
-        packPrice = Number(packOptionOrSize.price || itemMeta.price * packSize);
+        packPrice = Number(packOptionOrSize.price !== undefined ? packOptionOrSize.price : (itemMeta.price * packSize));
         packLabel = packOptionOrSize.label || `${packSize} ${itemMeta.unit}`;
       } else {
         packSize = Number(packOptionOrSize);
@@ -1536,11 +1536,10 @@ export default function StorefrontPage() {
                   <div className="pt-3">
                     <Button
                       type="button"
-                      variant="outline"
                       onClick={() => setActiveTab("order")}
-                      className="w-full h-11 rounded-2xl border-2 border-dashed border-primary/30 text-primary hover:bg-primary/5 font-bold text-xs gap-1.5 shadow-xs"
+                      className="w-full h-12 rounded-2xl bg-primary hover:bg-primary/90 text-white font-bold text-sm shadow-md gap-2 flex items-center justify-center transition"
                     >
-                      <Plus className="h-4 w-4" /> + Add More Produce Items / பொருட்களை சேர்க்க
+                      <Plus className="h-4 w-4 stroke-[2.5]" /> + Add More Produce Items / பொருட்களை சேர்க்க
                     </Button>
                   </div>
                 </div>
