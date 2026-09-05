@@ -108,6 +108,7 @@ export async function lookupCustomerAction(rawPhone: string): Promise<LookupResu
       showPrices: branch.show_prices,
       pickupAddress: branch.pickup_address,
       collectionTiming: (cycle as any).collection_timing || branch.collection_timing || "Tuesday 7:00 AM - 10:00 AM",
+      googleMapsUrl: (branch as any).google_maps_url || null,
     },
     cycle: {
       id: cycle.id,
@@ -135,6 +136,12 @@ export async function getStoreCatalogAction(rawPhone: string) {
     cycle ? store.cycle_items.filter((ci) => ci.cycle_id === cycle.id).map((ci) => [ci.item_id, ci]) : []
   );
 
+  const sortedCategories = [...store.categories]
+    .filter((c) => c.active)
+    .sort((a, b) => (Number(a.sort_order) || 999) - (Number(b.sort_order) || 999));
+
+  const catOrderMap = new Map(sortedCategories.map((c, idx) => [c.id, Number(c.sort_order) || (idx + 1)]));
+
   const catalogItems = cycle
     ? store.items
         .filter((item) => item.active)
@@ -161,6 +168,7 @@ export async function getStoreCatalogAction(rawPhone: string) {
             soldOut: false,
           };
         })
+        .sort((a, b) => (catOrderMap.get(a.categoryId) || 999) - (catOrderMap.get(b.categoryId) || 999))
     : [];
 
   // Fetch Current & Previous Orders for customer
@@ -173,7 +181,16 @@ export async function getStoreCatalogAction(rawPhone: string) {
 
   return {
     cycleId: cycle?.id,
-    categories: store.categories.filter((c) => c.active),
+    branch: branch
+      ? {
+          id: branch.id,
+          name: branch.name,
+          pickupAddress: branch.pickup_address,
+          collectionTiming: (cycle as any)?.collection_timing || branch.collection_timing || "Tuesday 7:00 AM - 10:00 AM",
+          googleMapsUrl: (branch as any).google_maps_url || null,
+        }
+      : null,
+    categories: sortedCategories,
     brands: store.brands.filter((b) => b.active),
     coupons: (store.coupons || []).filter((cp: any) => cp.active && cp.show_on_cart !== false),
     items: catalogItems,
@@ -274,6 +291,7 @@ export async function submitCustomerOrderAction(data: {
   note?: string;
   couponCode?: string;
   discountAmount?: number;
+  isEditingOrder?: boolean;
   lines: { 
     itemId: string; 
     packSize?: number; 
@@ -297,7 +315,7 @@ export async function submitCustomerOrderAction(data: {
 
   if (!cycle) throw new Error("No active harvest cycle found for this branch.");
 
-  // Check if existing placed order in this cycle
+  // Check if existing placed order in this active cycle
   const existingIdx = store.orders.findIndex(
     (o) => o.customer_id === customer.id && o.cycle_id === cycle.id && o.status === "Placed"
   );
@@ -330,22 +348,49 @@ export async function submitCustomerOrderAction(data: {
     });
 
   let orderNo = `ORD-${Date.now().toString().slice(-4)}`;
+  let isAppended = false;
 
   if (existingIdx >= 0) {
-    // Update in-place
-    orderNo = store.orders[existingIdx].order_no;
-    store.orders[existingIdx] = {
-      ...store.orders[existingIdx],
-      delivery_mode: data.deliveryMode || store.orders[existingIdx].delivery_mode,
-      delivery_address: data.address !== undefined ? data.address : store.orders[existingIdx].delivery_address,
-      note: data.note !== undefined ? data.note : store.orders[existingIdx].note,
-      lines: orderLines,
-      coupon_code: data.couponCode || null,
-      discount_amount: data.discountAmount || 0,
-      updated_at: new Date().toISOString(),
-    } as any;
+    const existingOrder = store.orders[existingIdx];
+    orderNo = existingOrder.order_no;
+
+    if (data.isEditingOrder) {
+      // 1. Explicit Full Edit Replacement (User clicked "Edit My Order")
+      existingOrder.lines = orderLines;
+    } else {
+      // 2. Auto-Merge / Append into existing active order (Never lose previous items)
+      isAppended = true;
+      const mergedLines = [...(existingOrder.lines || [])];
+      for (const newLine of orderLines) {
+        const matchIdx = mergedLines.findIndex(
+          (el: any) => el.item_id === newLine.item_id && Number(el.pack_size) === Number(newLine.pack_size)
+        );
+        if (matchIdx >= 0) {
+          const existingLine = mergedLines[matchIdx];
+          const newCount = Number(existingLine.pack_count || 1) + Number(newLine.pack_count || 1);
+          const newQty = Math.round(newCount * Number(newLine.pack_size) * 100) / 100;
+          const newTotal = Math.round(newCount * Number(newLine.pack_price) * 100) / 100;
+          mergedLines[matchIdx] = {
+            ...existingLine,
+            pack_count: newCount,
+            qty: newQty,
+            line_total: newTotal,
+          };
+        } else {
+          mergedLines.push(newLine);
+        }
+      }
+      existingOrder.lines = mergedLines;
+    }
+
+    if (data.deliveryMode) existingOrder.delivery_mode = data.deliveryMode;
+    if (data.address !== undefined) existingOrder.delivery_address = data.address;
+    if (data.note !== undefined) existingOrder.note = data.note;
+    if (data.couponCode) existingOrder.coupon_code = data.couponCode;
+    if (data.discountAmount) existingOrder.discount_amount = data.discountAmount;
+    existingOrder.updated_at = new Date().toISOString();
   } else {
-    // New Order
+    // 3. New Initial Order for this open cycle
     const orderRecord = {
       id: `ord-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       order_no: orderNo,
@@ -371,6 +416,7 @@ export async function submitCustomerOrderAction(data: {
     orderNo,
     deliveryDate: cycle.delivery_date,
     isUpdate: existingIdx >= 0,
+    isAppended,
   };
 }
 

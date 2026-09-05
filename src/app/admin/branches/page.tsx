@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Edit, Building2, Phone, MessageSquare } from "lucide-react";
+import { Plus, Edit, Building2, Phone, MessageSquare, MapPin, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AdminBranchesPage() {
@@ -29,6 +29,7 @@ export default function AdminBranchesPage() {
   const [supportNumber, setSupportNumber] = useState("");
   const [pickupAddress, setPickupAddress] = useState("");
   const [collectionTiming, setCollectionTiming] = useState("");
+  const [googleMapsUrl, setGoogleMapsUrl] = useState("");
   const [showPrices, setShowPrices] = useState(true);
   const [nextOpeningNote, setNextOpeningNote] = useState("");
   const [active, setActive] = useState(true);
@@ -57,6 +58,7 @@ export default function AdminBranchesPage() {
     setSupportNumber("919489581122");
     setPickupAddress("");
     setCollectionTiming("Tuesday 8:00 AM – 12:00 PM");
+    setGoogleMapsUrl("");
     setShowPrices(true);
     setNextOpeningNote("");
     setActive(true);
@@ -71,6 +73,7 @@ export default function AdminBranchesPage() {
     setSupportNumber(b.support_number || "");
     setPickupAddress(b.pickup_address || "");
     setCollectionTiming(b.collection_timing || "");
+    setGoogleMapsUrl(b.google_maps_url || "");
     setShowPrices(b.show_prices);
     setNextOpeningNote(b.next_opening_note || "");
     setActive(b.active);
@@ -88,6 +91,7 @@ export default function AdminBranchesPage() {
         supportNumber,
         pickupAddress,
         collectionTiming,
+        googleMapsUrl,
         showPrices,
         nextOpeningNote: nextOpeningNote || undefined,
         active,
@@ -146,6 +150,19 @@ export default function AdminBranchesPage() {
                 </div>
                 <div>Pickup Point: <strong>{b.pickup_address || "Standard Store Address"}</strong></div>
                 <div>Collection Timing: <strong>{b.collection_timing || "Tuesday morning"}</strong></div>
+                {b.google_maps_url && (
+                  <div className="flex items-center gap-1.5 pt-0.5">
+                    <MapPin className="h-3.5 w-3.5 text-red-500" />
+                    <a
+                      href={b.google_maps_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline font-semibold flex items-center gap-1"
+                    >
+                      Google Maps Location <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end pt-1">
@@ -160,7 +177,7 @@ export default function AdminBranchesPage() {
 
       {/* Add / Edit Branch Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="rounded-3xl max-w-md">
+        <DialogContent className="rounded-3xl max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-serif text-xl">
               {editingBranch ? "Edit Branch Details" : "Create New Branch"}
@@ -220,6 +237,31 @@ export default function AdminBranchesPage() {
                 placeholder="Where customers collect orders"
                 className="mt-1 rounded-xl text-sm"
               />
+            </div>
+
+            <div>
+              <Label className="text-xs font-semibold">Google Maps Share Link / Location URL</Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  value={googleMapsUrl}
+                  onChange={(e) => setGoogleMapsUrl(e.target.value)}
+                  placeholder="e.g. https://maps.app.goo.gl/... or https://goo.gl/maps/..."
+                  className="rounded-xl text-sm"
+                />
+                {googleMapsUrl && (
+                  <a
+                    href={googleMapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center px-3 rounded-xl bg-muted hover:bg-muted/80 text-xs font-semibold text-primary shrink-0"
+                  >
+                    Test ↗
+                  </a>
+                )}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Customers can tap this to navigate directly to your pickup counter on Google Maps.
+              </p>
             </div>
 
             <div>
