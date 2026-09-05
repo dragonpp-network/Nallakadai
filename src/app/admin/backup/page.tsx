@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useState } from "react";
 import {
@@ -251,28 +251,64 @@ export default function AdminBackupPage() {
         </Card>
       </div>
 
-      {/* Railway Permanent Cloud Storage Guide */}
-      <Card className="p-5 rounded-3xl border-2 border-emerald-500/30 bg-emerald-500/5 shadow-sm space-y-3">
-        <div className="flex items-start gap-3">
-          <div className="h-10 w-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow">
-            <ShieldCheck className="h-5 w-5" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-serif font-bold text-base text-foreground">
-              Automated Zero-Touch Persistence on Railway
-            </h3>
-            <p className="text-xs text-muted-foreground leading-relaxed mt-1">
-              To guarantee that new build deployments and code patches never reset your live store data, make sure you have attached a <strong>Railway Persistent Volume</strong> mounted at <code className="bg-background px-1.5 py-0.5 rounded font-mono text-emerald-900 border">/app/data</code>.
-            </p>
+      {/* Railway Storage Diagnostics & Guide */}
+      <Card className="p-5 rounded-3xl border-2 border-emerald-500/30 bg-emerald-500/5 shadow-sm space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="h-10 w-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h3 className="font-serif font-bold text-base text-foreground">
+                  Live Storage Engine & Persistence Status
+                </h3>
+                {overview?.diagnostics?.isRailwayVolume ? (
+                  <Badge className="bg-emerald-600 text-white text-[10px] font-mono px-2 py-0.5">
+                    ✓ Railway Volume Active (/app/data)
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50 text-[10px] font-mono px-2 py-0.5">
+                    Storage: {overview?.diagnostics?.activeDirectory || "Local Disk"}
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed mt-1">
+                Your store writes atomically with automated daily snapshots and startup schema validation.
+              </p>
+            </div>
           </div>
         </div>
 
+        {/* Live Diagnostics Card */}
+        {overview?.diagnostics && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-background/90 rounded-2xl p-3.5 text-xs border">
+            <div>
+              <span className="text-muted-foreground block text-[11px]">Storage Directory</span>
+              <span className="font-mono font-bold text-foreground text-xs break-all">
+                {overview.diagnostics.activeDirectory}
+              </span>
+            </div>
+            <div>
+              <span className="text-muted-foreground block text-[11px]">Database File Size</span>
+              <span className="font-mono font-bold text-foreground text-xs">
+                {overview.diagnostics.fileSizeFormatted}
+              </span>
+            </div>
+            <div>
+              <span className="text-muted-foreground block text-[11px]">Last Updated</span>
+              <span className="font-mono font-bold text-foreground text-xs">
+                {overview.diagnostics.lastModified ? new Date(overview.diagnostics.lastModified).toLocaleString("en-IN") : "Ready"}
+              </span>
+            </div>
+          </div>
+        )}
+
         <div className="bg-background/80 rounded-2xl p-3.5 text-xs space-y-2 border">
-          <div className="font-semibold text-foreground">How to attach Railway Volume (1-Time Setup):</div>
+          <div className="font-semibold text-foreground">Railway Persistent Volume Instructions:</div>
           <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-            <li>Open your <strong>Railway Dashboard</strong> &rarr; Click on your <strong>fresh-nallakadai</strong> service.</li>
-            <li>Click the <strong>Volumes</strong> tab (or click <strong>+ New</strong> &rarr; <strong>Volume</strong>).</li>
-            <li>Set the Mount Path to: <strong className="font-mono text-foreground">/app/data</strong> &rarr; Click <strong>Save</strong>.</li>
+            <li>Ensure a volume is attached in your Railway dashboard with mount path <strong className="font-mono text-foreground">/app/data</strong>.</li>
+            <li>Deployments automatically detect this mount and retain all customer, catalogue, cycle, and order data across code redeploys.</li>
           </ol>
         </div>
       </Card>

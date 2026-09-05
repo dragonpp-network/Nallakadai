@@ -1,5 +1,6 @@
 "use server";
 
+import crypto from "crypto";
 import { db, requireAdmin, requireSuperAdmin, branchScope, logAudit, DEFAULT_SUPER_ADMIN_ID, type AdminCtx } from "@/lib/supabase/server";
 import {
   getLocalStore,
@@ -9,6 +10,7 @@ import {
   restoreStoreFromJson,
   listStoreBackups,
   restoreFromBackupFile,
+  getStorageDiagnostics,
 } from "@/lib/data-store";
 
 /**
@@ -104,7 +106,7 @@ export async function saveAdminUserAction(
     }
   } else {
     store.admin_users.push({
-      id: `a0000000-0000-4000-8000-00000000000${store.admin_users.length + 1}`,
+      id: crypto.randomUUID(),
       email: cleanEmail,
       password_hash: data.password || "Nallakadai@2026",
       full_name: data.fullName,
@@ -211,7 +213,7 @@ export async function createCycleAction(
 
   const nextCycleNo = store.cycles.length + 1;
   const newCycle = {
-    id: `44444444-000${nextCycleNo}-4111-8111-111111111111`,
+    id: crypto.randomUUID(),
     branch_id: data.branchId,
     cycle_no: nextCycleNo,
     open_at: data.openAt,
@@ -712,7 +714,7 @@ export async function saveCustomerAction(
     }
   } else {
     store.customers.push({
-      id: `55555555-000${store.customers.length + 1}-4111-8111-111111111111`,
+      id: crypto.randomUUID(),
       name: customerData.name,
       mobile: customerData.mobile,
       alt_mobile: customerData.altMobile || null,
@@ -786,7 +788,7 @@ export async function bulkSaveCustomersAction(
       updatedCount++;
     } else {
       store.customers.push({
-        id: `55555555-000${store.customers.length + 1}-4111-8111-111111111111`,
+        id: crypto.randomUUID(),
         name: c.name || "Customer",
         mobile: cleanMobile,
         alt_mobile: c.altMobile || null,
@@ -856,7 +858,7 @@ export async function saveMasterItemAction(
       };
     }
   } else {
-    itemId = `33333333-00${store.items.length + 1}-4111-8111-111111111111`;
+    itemId = crypto.randomUUID();
     store.items.push({
       id: itemId,
       name_en: itemData.nameEn,
@@ -876,13 +878,28 @@ export async function saveMasterItemAction(
     });
   }
 
-  // Synchronize cycle_items pricing
-  for (const ci of store.cycle_items) {
-    if (ci.item_id === itemId) {
-      ci.price = netPrice;
-      ci.procurement_cost = procurementCost;
-      ci.selling_price = sellingPrice;
-      ci.discount_percent = discountPercent;
+  // 🔄 Auto-Attach or Synchronize with all currently Open Harvest Cycles
+  for (const cy of store.cycles) {
+    if (cy.status === "Open") {
+      const existingCi = store.cycle_items.find((ci) => ci.cycle_id === cy.id && ci.item_id === itemId);
+      if (existingCi) {
+        existingCi.price = netPrice;
+        existingCi.procurement_cost = procurementCost;
+        existingCi.selling_price = sellingPrice;
+        existingCi.discount_percent = discountPercent;
+      } else {
+        store.cycle_items.push({
+          cycle_id: cy.id,
+          item_id: itemId,
+          price: netPrice,
+          procurement_cost: procurementCost,
+          selling_price: sellingPrice,
+          discount_percent: discountPercent,
+          cap_qty: null,
+          min_qty: itemData.minQty || itemData.presets?.[0] || 0.5,
+          max_qty: itemData.maxQty || 10,
+        });
+      }
     }
   }
 
@@ -901,7 +918,7 @@ export async function saveMasterItemAction(
   }
 
   saveLocalStore(store);
-  return { success: true };
+  return { success: true, id: itemId };
 }
 
 export async function deleteMasterItemAction(
@@ -959,8 +976,8 @@ export async function bulkSaveMasterItemsAction(
         (c) => c.name.toLowerCase() === catName.toLowerCase() || c.name_ta === catName
       );
       if (!foundCat) {
-        // Create new category automatically
-        const newCatId = `22222222-00${store.categories.length + 1}-4111-8111-111111111111`;
+        // Create new category automatically with UUID
+        const newCatId = crypto.randomUUID();
         foundCat = {
           id: newCatId,
           name: catName,
@@ -985,7 +1002,7 @@ export async function bulkSaveMasterItemsAction(
         (b) => b.name.toLowerCase() === brandName.toLowerCase() || b.name_ta === brandName
       );
       if (!foundBrand && brandName.toLowerCase() !== "direct farm" && brandName.toLowerCase() !== "none") {
-        const newBrandId = `b0000000-000${store.brands.length + 1}-4111-8111-111111111111`;
+        const newBrandId = crypto.randomUUID();
         foundBrand = {
           id: newBrandId,
           name: brandName,
@@ -1053,7 +1070,7 @@ export async function bulkSaveMasterItemsAction(
       };
       updatedCount++;
     } else {
-      finalItemId = `33333333-00${store.items.length + 1}-4111-8111-111111111111`;
+      finalItemId = crypto.randomUUID();
       store.items.push({
         id: finalItemId,
         name_en: nameEn,
@@ -1074,13 +1091,28 @@ export async function bulkSaveMasterItemsAction(
       addedCount++;
     }
 
-    // Synchronize cycle_items pricing
-    for (const ci of store.cycle_items) {
-      if (ci.item_id === finalItemId) {
-        ci.price = netPrice;
-        ci.procurement_cost = procurementCost;
-        ci.selling_price = sellingPrice;
-        ci.discount_percent = discountPercent;
+    // Auto-Attach or Synchronize with all currently Open Harvest Cycles
+    for (const cy of store.cycles) {
+      if (cy.status === "Open") {
+        const existingCi = store.cycle_items.find((ci) => ci.cycle_id === cy.id && ci.item_id === finalItemId);
+        if (existingCi) {
+          existingCi.price = netPrice;
+          existingCi.procurement_cost = procurementCost;
+          existingCi.selling_price = sellingPrice;
+          existingCi.discount_percent = discountPercent;
+        } else {
+          store.cycle_items.push({
+            cycle_id: cy.id,
+            item_id: finalItemId,
+            price: netPrice,
+            procurement_cost: procurementCost,
+            selling_price: sellingPrice,
+            discount_percent: discountPercent,
+            cap_qty: null,
+            min_qty: minQty,
+            max_qty: maxQty,
+          });
+        }
       }
     }
   }
@@ -1128,7 +1160,7 @@ export async function saveAdminCouponAction(
     }
   } else {
     store.coupons.push({
-      id: `c0000000-000${store.coupons.length + 1}-4111-8111-111111111111`,
+      id: crypto.randomUUID(),
       code,
       description: couponData.description,
       discount_type: couponData.discountType || "percentage",
@@ -1190,7 +1222,7 @@ export async function saveBranchAction(
     }
   } else {
     store.branches.push({
-      id: `11111111-000${store.branches.length + 1}-4111-8111-111111111111`,
+      id: crypto.randomUUID(),
       name: branchData.name,
       address: branchData.address,
       whatsapp_number: branchData.whatsappNumber,
@@ -1276,7 +1308,7 @@ export async function saveCategoryAction(
       };
     }
   } else {
-    const newId = `22222222-00${store.categories.length + 1}-4111-8111-111111111111`;
+    const newId = crypto.randomUUID();
     store.categories.push({
       id: newId,
       name: categoryData.name,
@@ -1382,7 +1414,7 @@ export async function bulkSaveCategoriesAction(
       updatedCount++;
     } else {
       store.categories.push({
-        id: `22222222-00${store.categories.length + 1}-4111-8111-111111111111`,
+        id: crypto.randomUUID(),
         name,
         name_ta: nameTa,
         tint,
@@ -1445,7 +1477,7 @@ export async function saveBrandAction(
       };
     }
   } else {
-    const newId = `b0000000-000${store.brands.length + 1}-4111-8111-111111111111`;
+    const newId = crypto.randomUUID();
     store.brands.push({
       id: newId,
       name: brandData.name,
@@ -1548,7 +1580,7 @@ export async function bulkSaveBrandsAction(
       updatedCount++;
     } else {
       store.brands.push({
-        id: `b0000000-000${store.brands.length + 1}-4111-8111-111111111111`,
+        id: crypto.randomUUID(),
         name,
         name_ta: nameTa,
         logo_url: null,
@@ -1584,6 +1616,7 @@ export async function getDatabaseOverviewAction(userId: string = DEFAULT_SUPER_A
     categoryCount: (store.categories || []).length,
     couponCount: (store.coupons || []).length,
     backups,
+    diagnostics: getStorageDiagnostics(),
   };
 }
 
