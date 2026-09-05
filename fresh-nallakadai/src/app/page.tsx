@@ -662,7 +662,7 @@ export default function StorefrontPage() {
 
   // 2. Main Storefront Mobile Web App Layout with Bottom Navigation Bar
   return (
-    <div className="min-h-screen bg-[#faf8f5] pb-24 text-foreground flex flex-col justify-between">
+    <div className="min-h-screen bg-[#faf8f5] pb-28 text-foreground flex flex-col justify-between overflow-x-hidden w-full max-w-full">
       {/* Top Mobile Bar */}
       <header className="sticky top-0 z-30 bg-primary text-primary-foreground shadow-md">
         <div className="mx-auto flex max-w-xl items-center justify-between px-4 py-3">
@@ -983,135 +983,169 @@ export default function StorefrontPage() {
             ) : (
               <div className="space-y-3">
                 {filteredItems.map((item: any) => {
+                  const entry = cart[item.itemId];
                   const packOptions: any[] = (item.packOptions && item.packOptions.length > 0)
                     ? item.packOptions
                     : (item.presets || [1]).map((p: number) => ({
-                        label: `${p} ${item.unit}`,
+                        label: `${p} ${item.unit || "Kg"}`,
                         qty: p,
-                        price: Math.round(item.price * p * 100) / 100,
+                        price: Math.round((item.price || 0) * p * 100) / 100,
                       }));
 
-                  const defaultOpt = packOptions[0];
+                  const defaultOpt = packOptions[0] || { qty: 1, label: `1 ${item.unit || "Kg"}`, price: item.price || 0 };
                   const activeOption = packOptions.find((opt) => opt.qty === entry?.packSize) || defaultOpt;
                   const activePackSize = activeOption?.qty ?? (item.presets?.[0] || 1);
-                  const activePackPrice = entry?.packPrice !== undefined ? entry.packPrice : (activeOption?.price ?? (item.price * activePackSize));
-                  const activePackLabel = entry?.packLabel || activeOption?.label || `${activePackSize} ${item.unit}`;
+                  const activePackPrice = entry?.packPrice !== undefined ? entry.packPrice : (activeOption?.price ?? ((item.price || 0) * activePackSize));
+                  const activePackLabel = entry?.packLabel || activeOption?.label || `${activePackSize} ${item.unit || "Kg"}`;
                   const packCount = entry?.packCount || 0;
                   const isSelected = packCount > 0;
+
                   return (
                     <div
                       key={item.itemId}
-                      className={`rounded-3xl border bg-card p-4 shadow-sm hover:shadow-md transition flex flex-col justify-between gap-3 ${
-                        isSelected ? "border-primary/40 ring-1 ring-primary/20 bg-primary/2" : ""
+                      className={`rounded-3xl border bg-card p-4 shadow-sm hover:shadow-md transition space-y-3 ${
+                        isSelected ? "border-primary/40 ring-1 ring-primary/20 bg-primary/[0.02]" : ""
                       }`}
                     >
+                      {/* Top Row: Produce Image + Names + Base Price */}
                       <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-3 flex-1">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
                           <GenericProduceImage
                             src={item.imageUrl}
                             alt={item.nameEn}
                             fallbackType="product"
-                            className="h-16 w-16 rounded-2xl object-cover border shadow-sm shrink-0"
+                            className="h-14 w-14 rounded-2xl object-cover border shadow-sm shrink-0"
                           />
-
-                          <div className="flex-1">
+                          <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <h3 className="font-bold text-base text-foreground leading-tight">{item.nameEn}</h3>
+                              <h3 className="font-bold text-base text-foreground leading-snug truncate">{item.nameEn}</h3>
                               {item.soldOut && (
                                 <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
                                   Sold Out
                                 </Badge>
                               )}
                             </div>
-                            <p className="text-sm font-tamil text-muted-foreground mt-0.5">{item.nameTa}</p>
-
-                            {lookup.branch.showPrices && (
-                              <div className="mt-1.5 flex items-baseline gap-1.5 flex-wrap">
-                                <p className="text-base font-extrabold text-primary font-mono">
-                                  ₹{item.price}{" "}
-                                  <span className="text-xs font-normal text-muted-foreground">/ {item.unit}</span>
-                                </p>
-                                {item.sellingPrice && item.sellingPrice > item.price && (
-                                  <span className="text-xs text-muted-foreground line-through font-mono">
-                                    ₹{item.sellingPrice}
-                                  </span>
-                                )}
-                                {item.discountPercent > 0 && (
-                                  <Badge className="bg-emerald-600 text-white text-[9px] px-1.5 py-0 font-bold">
-                                    {item.discountPercent}% OFF
-                                  </Badge>
-                                )}
-                              </div>
+                            <p className="text-xs font-tamil text-muted-foreground mt-0.5">{item.nameTa}</p>
+                            {item.brand && (
+                              <p className="text-[11px] text-primary/80 font-medium">{item.brand.name}</p>
                             )}
                           </div>
                         </div>
 
-                        {!item.soldOut && (
-                          <div className="flex flex-col items-end gap-2 shrink-0">
-                            {/* Package Size Variant Selector Pills */}
-                            <div className="flex gap-1.5 flex-wrap justify-end max-w-[260px]">
-                              {packOptions.map((opt: any) => {
-                                const isPackActive = activePackSize === opt.qty;
-                                return (
-                                  <button
-                                    key={opt.label || opt.qty}
-                                    type="button"
-                                    onClick={() => handleSelectPack(item.itemId, opt, item)}
-                                    className={`relative rounded-xl px-2.5 py-1 text-xs font-bold transition shadow-sm flex flex-col items-center ${
-                                      isPackActive && isSelected
-                                        ? "bg-primary text-white scale-105"
-                                        : isPackActive
-                                        ? "bg-primary/20 text-primary border border-primary/30"
-                                        : "bg-muted text-muted-foreground hover:bg-muted/80"
-                                    }`}
-                                  >
-                                    <span className="whitespace-nowrap">{opt.label}</span>
-                                    {lookup.branch.showPrices && opt.price !== undefined && (
-                                      <span className={`text-[10px] font-mono ${isPackActive && isSelected ? "text-primary-foreground/90" : "text-foreground/80"}`}>
-                                        ₹{opt.price}
-                                      </span>
-                                    )}
-                                    {opt.savingsText && (
-                                      <span className="absolute -top-2 -right-1 bg-amber-500 text-white text-[8px] font-extrabold px-1 rounded-full shadow-xs whitespace-nowrap">
-                                        {opt.savingsText}
-                                      </span>
-                                    )}
-                                  </button>
-                                );
-                              })}
-                            </div>
-
-                            {/* Stepper for Pack Multiplier Count */}
-                            <div className="flex items-center border border-input rounded-2xl bg-background shadow-inner">
-                              <button
-                                type="button"
-                                onClick={() => handleUpdatePackCount(item.itemId, packCount - 1, item)}
-                                disabled={packCount === 0}
-                                className="px-3 py-1.5 text-muted-foreground hover:text-foreground disabled:opacity-40"
-                              >
-                                <Minus className="h-3.5 w-3.5" />
-                              </button>
-                              <span className="w-16 text-center text-xs font-bold text-foreground">
-                                {packCount > 0 ? `${packCount} ${packCount > 1 ? "Pks" : "Pk"}` : "0"}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleUpdatePackCount(item.itemId, packCount + 1, item)}
-                                className="px-3 py-1.5 text-muted-foreground hover:text-foreground"
-                              >
-                                <Plus className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-
-                            {packCount > 0 && (
-                              <div className="text-[11px] font-semibold text-emerald-800 text-right">
-                                {packCount} × {activePackLabel}
-                                {lookup.branch.showPrices && ` (₹${activePackPrice}) = ₹${Math.round(packCount * activePackPrice * 100) / 100}`}
-                              </div>
+                        {lookup.branch.showPrices && (
+                          <div className="text-right shrink-0">
+                            <p className="text-base font-extrabold text-primary font-mono leading-tight">
+                              ₹{item.price}
+                              <span className="text-[11px] font-normal text-muted-foreground">/{item.unit}</span>
+                            </p>
+                            {item.sellingPrice && item.sellingPrice > item.price && (
+                              <p className="text-[11px] text-muted-foreground line-through font-mono">
+                                ₹{item.sellingPrice}
+                              </p>
+                            )}
+                            {item.discountPercent > 0 && (
+                              <Badge className="bg-emerald-600 text-white text-[9px] px-1.5 py-0 font-bold mt-0.5">
+                                {item.discountPercent}% OFF
+                              </Badge>
                             )}
                           </div>
                         )}
                       </div>
+
+                      {/* Middle Row: Full-width Touch-Friendly Pack Variant Chips */}
+                      {!item.soldOut && (
+                        <div className="space-y-2 pt-1 border-t border-border/40">
+                          <div className="text-[11px] font-semibold text-muted-foreground flex items-center justify-between">
+                            <span>Select Pack Size:</span>
+                            {activeOption?.savingsText && (
+                              <span className="text-emerald-700 font-bold bg-emerald-500/10 px-1.5 py-0.2 rounded-md">
+                                {activeOption.savingsText}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="no-scrollbar flex gap-1.5 overflow-x-auto pb-1">
+                            {packOptions.map((opt: any) => {
+                              const isPackActive = activePackSize === opt.qty;
+                              return (
+                                <button
+                                  key={opt.label || opt.qty}
+                                  type="button"
+                                  onClick={() => handleSelectPack(item.itemId, opt, item)}
+                                  className={`relative rounded-2xl px-3 py-1.5 text-xs font-bold transition shadow-xs flex flex-col items-center shrink-0 min-w-[70px] ${
+                                    isPackActive
+                                      ? "bg-primary text-white shadow-sm scale-102"
+                                      : "bg-muted text-muted-foreground hover:bg-muted/80 border border-border/60"
+                                  }`}
+                                >
+                                  <span className="whitespace-nowrap">{opt.label}</span>
+                                  {lookup.branch.showPrices && opt.price !== undefined && (
+                                    <span
+                                      className={`text-[11px] font-mono mt-0.5 ${
+                                        isPackActive ? "text-white/95" : "text-foreground font-semibold"
+                                      }`}
+                                    >
+                                      ₹{opt.price}
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Bottom Row: Selected Calculation Summary & Mobile Stepper Button */}
+                          <div className="flex items-center justify-between pt-1 gap-2">
+                            <div className="text-xs">
+                              {isSelected ? (
+                                <div>
+                                  <span className="font-bold text-emerald-800">
+                                    {packCount} × {activePackLabel}
+                                  </span>
+                                  {lookup.branch.showPrices && (
+                                    <span className="font-bold text-primary font-mono ml-1">
+                                      = ₹{Math.round(packCount * activePackPrice * 100) / 100}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground text-[11px]">Tap pack & add quantity</span>
+                              )}
+                            </div>
+
+                            {/* Large Touch Target Stepper / Add Button */}
+                            {isSelected ? (
+                              <div className="flex items-center border border-primary/30 rounded-2xl bg-background shadow-xs overflow-hidden">
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdatePackCount(item.itemId, packCount - 1, item)}
+                                  className="h-9 w-9 flex items-center justify-center text-primary hover:bg-primary/10 active:scale-95 transition"
+                                >
+                                  <Minus className="h-4 w-4" />
+                                </button>
+                                <span className="w-14 text-center text-xs font-bold font-mono text-foreground">
+                                  {packCount} {packCount > 1 ? "Pks" : "Pk"}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdatePackCount(item.itemId, packCount + 1, item)}
+                                  className="h-9 w-9 flex items-center justify-center text-primary hover:bg-primary/10 active:scale-95 transition"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={() => handleUpdatePackCount(item.itemId, 1, item)}
+                                className="rounded-2xl bg-primary text-white font-bold text-xs h-9 px-4 shadow-sm gap-1 hover:bg-primary/90 active:scale-95 transition"
+                              >
+                                <Plus className="h-3.5 w-3.5" /> Add
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
