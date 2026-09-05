@@ -35,6 +35,7 @@ import {
   ChevronRight,
   Clock,
   LayoutGrid,
+  List,
   Minus,
   Plus,
   Receipt,
@@ -57,12 +58,14 @@ import {
   Award,
   TicketPercent,
   Percent,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { BrandSplit } from "@/components/brand/BrandSplit";
 import { categoryIcon } from "@/lib/category-icons";
 
 const MOBILE_STORAGE_KEY = "nk_customer_mobile";
+const VIEW_MODE_STORAGE_KEY = "nk_store_view_mode";
 
 export default function StorefrontPage() {
   const [mounted, setMounted] = useState(false);
@@ -75,6 +78,9 @@ export default function StorefrontPage() {
 
   // Active Tab: 'home' | 'order' | 'cart' | 'history'
   const [activeTab, setActiveTab] = useState<"home" | "order" | "cart" | "history">("home");
+
+  // View Mode: 'grid' | 'list'
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   // Filters
   const [activeCategory, setActiveCategory] = useState("all");
@@ -111,7 +117,16 @@ export default function StorefrontPage() {
       setPhoneInput(saved);
       handleLookup(saved);
     }
+    const savedView = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
+    if (savedView === "grid" || savedView === "list") {
+      setViewMode(savedView);
+    }
   }, []);
+
+  function handleSetViewMode(mode: "grid" | "list") {
+    setViewMode(mode);
+    localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
+  }
 
   async function handleLookup(num: string) {
     setLoading(true);
@@ -782,6 +797,20 @@ export default function StorefrontPage() {
                       <span className="font-semibold text-primary">{lookup.branch.collectionTiming}</span>
                     </div>
                   )}
+                  {lookup.branch?.googleMapsUrl && activePlacedOrder.delivery_mode === "Customer Pickup" && (
+                    <div className="pt-1 border-t border-border/50 flex justify-between items-center">
+                      <span className="text-muted-foreground">Location:</span>
+                      <a
+                        href={lookup.branch.googleMapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 font-bold text-primary hover:underline text-[11px]"
+                      >
+                        <MapPin className="h-3.5 w-3.5 text-red-500" />
+                        Open Google Maps <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 pt-1">
@@ -799,7 +828,7 @@ export default function StorefrontPage() {
                     }}
                     className="rounded-2xl border-destructive/30 text-destructive hover:bg-destructive/10 text-xs font-semibold h-10 px-3"
                   >
-                    <XCircle className="h-3.5 w-3.5 mr-1" /> Cancel
+                    <XCircle className="h-3.5 w-3.5 mr-1" /> Cancel Order
                   </Button>
                 </div>
               </div>
@@ -946,6 +975,41 @@ export default function StorefrontPage() {
               })}
             </div>
 
+            {/* View Mode Switcher Bar */}
+            <div className="flex items-center justify-between px-1 pt-0.5">
+              <span className="text-xs font-semibold text-muted-foreground">
+                Showing {filteredItems.length} fresh produce item(s)
+              </span>
+              <div className="flex items-center bg-muted/80 p-0.5 rounded-2xl border border-border/60 shadow-xs">
+                <button
+                  type="button"
+                  onClick={() => handleSetViewMode("grid")}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition ${
+                    viewMode === "grid"
+                      ? "bg-primary text-white shadow-xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  title="2-Column Grid View"
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  <span>Grid</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSetViewMode("list")}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition ${
+                    viewMode === "list"
+                      ? "bg-primary text-white shadow-xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  title="Detailed List View"
+                >
+                  <List className="h-3.5 w-3.5" />
+                  <span>List</span>
+                </button>
+              </div>
+            </div>
+
             {/* Sticky Floating View Cart & Checkout Bar */}
             {cartLines.length > 0 && (
               <div className="sticky top-16 z-30 my-1 animate-in slide-in-from-top-2 duration-200">
@@ -970,7 +1034,7 @@ export default function StorefrontPage() {
               </div>
             )}
 
-            {/* Categorized Produce List */}
+            {/* Categorized Produce List or Grid */}
             {storeLoading ? (
               <div className="py-16 text-center text-sm text-muted-foreground flex flex-col items-center justify-center gap-2">
                 <div className="h-10 w-10 rounded-full border-3 border-primary border-t-transparent animate-spin" />
@@ -980,7 +1044,153 @@ export default function StorefrontPage() {
               <div className="rounded-3xl bg-card p-10 text-center text-muted-foreground border shadow-sm">
                 No produce found matching your search.
               </div>
+            ) : viewMode === "grid" ? (
+              /* ========================================================================= */
+              /* 2-COLUMN COMPACT GRID VIEW                                                */
+              /* ========================================================================= */
+              <div className="grid grid-cols-2 gap-3">
+                {filteredItems.map((item: any) => {
+                  const entry = cart[item.itemId];
+                  const packOptions: any[] = (item.packOptions && item.packOptions.length > 0)
+                    ? item.packOptions
+                    : (item.presets || [1]).map((p: number) => ({
+                        label: `${p} ${item.unit || "Kg"}`,
+                        qty: p,
+                        price: Math.round((item.price || 0) * p * 100) / 100,
+                      }));
+
+                  const defaultOpt = packOptions[0] || { qty: 1, label: `1 ${item.unit || "Kg"}`, price: item.price || 0 };
+                  const activeOption = packOptions.find((opt) => opt.qty === entry?.packSize) || defaultOpt;
+                  const activePackSize = activeOption?.qty ?? (item.presets?.[0] || 1);
+                  const activePackPrice = entry?.packPrice !== undefined ? entry.packPrice : (activeOption?.price ?? ((item.price || 0) * activePackSize));
+                  const activePackLabel = entry?.packLabel || activeOption?.label || `${activePackSize} ${item.unit || "Kg"}`;
+                  const packCount = entry?.packCount || 0;
+                  const isSelected = packCount > 0;
+
+                  return (
+                    <div
+                      key={item.itemId}
+                      className={`rounded-3xl border bg-card p-3 shadow-xs hover:shadow-md transition flex flex-col justify-between space-y-2.5 ${
+                        isSelected ? "border-primary/50 ring-2 ring-primary/20 bg-primary/[0.02]" : ""
+                      }`}
+                    >
+                      <div className="space-y-2">
+                        {/* Top Image & Badges */}
+                        <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-muted/40 border shadow-inner">
+                          <GenericProduceImage
+                            src={item.imageUrl}
+                            alt={item.nameEn}
+                            fallbackType="product"
+                            className="w-full h-full object-cover"
+                          />
+                          {item.soldOut && (
+                            <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center">
+                              <Badge variant="destructive" className="text-[10px] font-bold">
+                                Sold Out
+                              </Badge>
+                            </div>
+                          )}
+                          {item.discountPercent > 0 && !item.soldOut && (
+                            <div className="absolute top-2 left-2">
+                              <Badge className="bg-emerald-600 text-white text-[9px] px-1.5 py-0 font-bold shadow">
+                                {item.discountPercent}% OFF
+                              </Badge>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Produce Title & Tamil */}
+                        <div>
+                          <h3 className="font-bold text-sm text-foreground leading-snug line-clamp-1">{item.nameEn}</h3>
+                          <p className="text-[11px] font-tamil text-muted-foreground truncate">{item.nameTa}</p>
+                          {item.brand && (
+                            <p className="text-[10px] text-primary/80 font-medium truncate">{item.brand.name}</p>
+                          )}
+                        </div>
+
+                        {/* Price & Unit */}
+                        {lookup.branch.showPrices && (
+                          <div className="flex items-baseline gap-1.5 flex-wrap">
+                            <span className="text-sm font-extrabold text-primary font-mono">
+                              ₹{item.price}
+                              <span className="text-[10px] font-normal text-muted-foreground">/{item.unit}</span>
+                            </span>
+                            {item.sellingPrice && item.sellingPrice > item.price && (
+                              <span className="text-[10px] text-muted-foreground line-through font-mono">
+                                ₹{item.sellingPrice}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Pack Options & Stepper */}
+                      {!item.soldOut && (
+                        <div className="space-y-2 pt-1 border-t border-border/40">
+                          {/* Pack chips */}
+                          <div className="no-scrollbar flex gap-1 overflow-x-auto pb-0.5">
+                            {packOptions.map((opt: any) => {
+                              const isPackActive = activePackSize === opt.qty;
+                              return (
+                                <button
+                                  key={opt.label || opt.qty}
+                                  type="button"
+                                  onClick={() => handleSelectPack(item.itemId, opt, item)}
+                                  className={`rounded-xl px-2 py-1 text-[10px] font-bold transition shrink-0 ${
+                                    isPackActive
+                                      ? "bg-primary text-white shadow-xs"
+                                      : "bg-muted text-muted-foreground hover:bg-muted/80 border border-border/50"
+                                  }`}
+                                >
+                                  {opt.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Selected Total & Add / Stepper */}
+                          <div className="flex items-center justify-between gap-1">
+                            {isSelected ? (
+                              <div className="w-full flex items-center justify-between border border-primary/30 rounded-xl bg-background shadow-xs overflow-hidden h-8">
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdatePackCount(item.itemId, packCount - 1, item)}
+                                  className="h-full px-2 flex items-center justify-center text-primary hover:bg-primary/10 active:scale-95 transition"
+                                >
+                                  <Minus className="h-3.5 w-3.5" />
+                                </button>
+                                <span className="text-[11px] font-bold font-mono text-foreground px-1">
+                                  {packCount} pk
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdatePackCount(item.itemId, packCount + 1, item)}
+                                  className="h-full px-2 flex items-center justify-center text-primary hover:bg-primary/10 active:scale-95 transition"
+                                >
+                                  <Plus className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={() => handleUpdatePackCount(item.itemId, 1, item)}
+                                className="w-full rounded-xl bg-primary text-white font-bold text-xs h-8 shadow-xs gap-1 hover:bg-primary/90 active:scale-95 transition"
+                              >
+                                <Plus className="h-3 w-3" /> Add
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
+              /* ========================================================================= */
+              /* DETAILED LIST VIEW                                                        */
+              /* ========================================================================= */
               <div className="space-y-3">
                 {filteredItems.map((item: any) => {
                   const entry = cart[item.itemId];
@@ -1414,10 +1624,23 @@ export default function StorefrontPage() {
                       />
                     </div>
                   ) : (
-                    <div className="rounded-2xl bg-muted/60 p-3.5 text-xs text-muted-foreground space-y-1 border">
+                    <div className="rounded-2xl bg-muted/60 p-3.5 text-xs text-muted-foreground space-y-1.5 border">
                       <div className="font-semibold text-foreground">Pickup Location:</div>
-                      <div>{lookup.branch.pickupAddress}</div>
+                      <div>{lookup.branch.pickupAddress || "Standard Store Pickup"}</div>
                       <div className="text-primary font-medium">Timing: {lookup.branch.collectionTiming}</div>
+                      {lookup.branch?.googleMapsUrl && (
+                        <div className="pt-1 border-t border-border/50">
+                          <a
+                            href={lookup.branch.googleMapsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 font-bold text-primary hover:underline text-xs bg-primary/10 px-2.5 py-1.5 rounded-xl"
+                          >
+                            <MapPin className="h-3.5 w-3.5 text-red-500" />
+                            Open in Google Maps <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -1431,6 +1654,19 @@ export default function StorefrontPage() {
                     />
                   </div>
                 </div>
+
+                {/* Merge Notice if placing additional items with existing active order */}
+                {activePlacedOrder && !editingOrderNo && (
+                  <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/30 p-3.5 text-xs text-emerald-950 flex items-start gap-2.5 shadow-xs">
+                    <Sparkles className="h-4 w-4 shrink-0 text-emerald-700 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <div className="font-bold">Appending to Active Order {activePlacedOrder.order_no}</div>
+                      <p className="text-[11px] text-emerald-800">
+                        These items will be merged seamlessly into your open cycle order. Your previous items are retained safely.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Cart Subtotal, Discount & Final Bill */}
                 <div className="rounded-3xl bg-card p-4 sm:p-5 border shadow-sm space-y-2">
@@ -1465,6 +1701,8 @@ export default function StorefrontPage() {
                     ? "Submitting..."
                     : editingOrderNo
                     ? `Update Order (${editingOrderNo}) • ₹${totalAmount.toFixed(2)}`
+                    : activePlacedOrder
+                    ? `Append to Order (${activePlacedOrder.order_no}) • ₹${totalAmount.toFixed(2)}`
                     : `Confirm & Place Order • ₹${totalAmount.toFixed(2)}`}
                 </Button>
               </>
@@ -1554,7 +1792,7 @@ export default function StorefrontPage() {
                           }}
                           className="rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 text-xs font-semibold h-9 px-3"
                         >
-                          Cancel
+                          <XCircle className="h-3.5 w-3.5 mr-1" /> Cancel Order
                         </Button>
                       </>
                     )}

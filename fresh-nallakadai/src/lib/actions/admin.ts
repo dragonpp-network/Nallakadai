@@ -1220,6 +1220,7 @@ export async function saveBranchAction(
         support_number: branchData.supportNumber,
         pickup_address: branchData.pickupAddress,
         collection_timing: branchData.collectionTiming,
+        google_maps_url: branchData.googleMapsUrl !== undefined ? branchData.googleMapsUrl : (store.branches[idx].google_maps_url || null),
         show_prices: branchData.showPrices,
         next_opening_note: branchData.nextOpeningNote,
         active: branchData.active,
@@ -1234,6 +1235,7 @@ export async function saveBranchAction(
       support_number: branchData.supportNumber,
       pickup_address: branchData.pickupAddress,
       collection_timing: branchData.collectionTiming,
+      google_maps_url: branchData.googleMapsUrl || null,
       show_prices: branchData.showPrices,
       next_opening_note: branchData.nextOpeningNote,
       active: branchData.active,
@@ -1275,13 +1277,37 @@ export async function seedDemoDataAction(userId: string = DEFAULT_SUPER_ADMIN_ID
  */
 export async function getCategoriesAdminAction() {
   const store = getLocalStore();
-  return store.categories.map((cat) => {
-    const count = store.items.filter((i) => i.category_id === cat.id).length;
-    return {
-      ...cat,
-      itemCount: count,
-    };
+  return [...store.categories]
+    .sort((a, b) => (Number(a.sort_order) || 999) - (Number(b.sort_order) || 999))
+    .map((cat) => {
+      const count = store.items.filter((i) => i.category_id === cat.id).length;
+      return {
+        ...cat,
+        itemCount: count,
+      };
+    });
+}
+
+/**
+ * Reorder Categories Priority Sequence
+ */
+export async function reorderCategoriesAction(
+  userId: string = DEFAULT_SUPER_ADMIN_ID,
+  orderedCategoryIds: string[]
+) {
+  await requireAdmin(userId);
+  const store = getLocalStore();
+
+  orderedCategoryIds.forEach((catId, idx) => {
+    const cat = store.categories.find((c) => c.id === catId);
+    if (cat) {
+      cat.sort_order = idx + 1;
+    }
   });
+
+  store.categories.sort((a, b) => (Number(a.sort_order) || 999) - (Number(b.sort_order) || 999));
+  saveLocalStore(store);
+  return { success: true };
 }
 
 export async function saveCategoryAction(
