@@ -10,6 +10,7 @@ import {
   getCategoriesAdminAction,
   getBrandsAction,
 } from "@/lib/actions/admin";
+import { parsePackOptionsInput } from "@/lib/pricing-utils";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -84,6 +85,12 @@ export default function AdminItemsPage() {
   const [sellingPrice, setSellingPrice] = useState(50);
   const [discountPercent, setDiscountPercent] = useState(0);
   const [active, setActive] = useState(true);
+
+  // Live Customer Pack Pricing Calculation for Instant Preview
+  const liveNetPrice = Math.round((sellingPrice - (sellingPrice * discountPercent) / 100) * 100) / 100;
+  const livePackOptions = useMemo(() => {
+    return parsePackOptionsInput(presetsStr, liveNetPrice, unit);
+  }, [presetsStr, liveNetPrice, unit]);
 
   useEffect(() => {
     loadData();
@@ -221,12 +228,12 @@ export default function AdminItemsPage() {
         NameEn: "Green Chilli",
         NameTa: "பச்சை மிளகாய்",
         Category: "Vegetables",
-        Unit: "Gram",
-        Presets: "100, 250, 500",
-        MinQty: 100,
-        MaxQty: 1000,
-        ProcurementCost: 15,
-        MRP: 25,
+        Unit: "Kg",
+        Presets: "100g, 250g, 500g, 1kg",
+        MinQty: 0.1,
+        MaxQty: 2,
+        ProcurementCost: 100,
+        MRP: 155,
         DiscountPercent: 0,
         Brand: "Direct Farm",
         Active: "TRUE",
@@ -277,12 +284,12 @@ export default function AdminItemsPage() {
         NameEn: "Fresh Ginger",
         NameTa: "இஞ்சி",
         Category: "Vegetables",
-        Unit: "Gram",
-        Presets: "100, 250, 500",
-        MinQty: 100,
-        MaxQty: 1000,
-        ProcurementCost: 30,
-        MRP: 50,
+        Unit: "Kg",
+        Presets: "100g, 250g, 500g, 1kg",
+        MinQty: 0.1,
+        MaxQty: 2,
+        ProcurementCost: 120,
+        MRP: 200,
         DiscountPercent: 0,
         Brand: "Direct Farm",
         Active: "TRUE",
@@ -1440,8 +1447,45 @@ export default function AdminItemsPage() {
               <div className="flex justify-between items-center text-xs pt-1 border-t">
                 <span className="text-muted-foreground">Final Customer Price:</span>
                 <span className="text-sm font-bold text-primary font-mono">
-                  ₹{Math.round((sellingPrice - (sellingPrice * discountPercent) / 100) * 100) / 100} / {unit}
+                  ₹{liveNetPrice} / {unit}
                 </span>
+              </div>
+            </div>
+
+            {/* Live Customer Storefront Preview Card */}
+            <div className="rounded-2xl bg-primary/5 border border-primary/20 p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+                  <Package className="h-3.5 w-3.5" /> Live Customer Storefront Preview
+                </span>
+                <span className="text-[10px] text-muted-foreground font-medium">
+                  Base: ₹{liveNetPrice} / {unit}
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                How pack choices will display on mobile & desktop storefront for customers:
+              </p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {livePackOptions.length > 0 ? (
+                  livePackOptions.map((opt, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-xl border bg-background px-2.5 py-1.5 shadow-sm text-xs flex flex-col items-center min-w-[70px]"
+                    >
+                      <span className="font-bold text-foreground">{opt.label}</span>
+                      <span className="font-bold font-mono text-primary text-[11px]">
+                        ₹{opt.price !== undefined ? opt.price : Math.round(liveNetPrice * opt.qty * 100) / 100}
+                      </span>
+                      {opt.savingsText && (
+                        <span className="text-[9px] font-bold text-emerald-600 bg-emerald-500/10 px-1 rounded mt-0.5">
+                          {opt.savingsText}
+                        </span>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <span className="text-xs text-muted-foreground italic">No packaging options configured yet</span>
+                )}
               </div>
             </div>
 

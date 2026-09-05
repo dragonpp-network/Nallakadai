@@ -412,17 +412,27 @@ export async function getCustomerOrderHistoryAction(rawPhone: string) {
       let total = 0;
       const resolvedItems = (o.lines || []).map((l: any) => {
         const masterItem = store.items.find((i) => i.id === l.item_id);
-        const price = isPipeline && masterItem ? masterItem.price : Number(l.price);
-        const lineTotal = Math.round(Number(l.qty) * price * 100) / 100;
+        const price = isPipeline && masterItem ? masterItem.price : Number(l.price || 0);
+        const packSize = Number(l.pack_size || l.qty || 1);
+        const packCount = Number(l.pack_count || 1);
+        const packPrice = Number(l.pack_price !== undefined ? l.pack_price : price * packSize);
+        const packLabel = l.pack_label || `${packSize} ${masterItem?.unit || l.unit || "Kg"}`;
+        const lineTotal = l.line_total !== undefined ? Number(l.line_total) : Math.round(Number(l.qty || 1) * price * 100) / 100;
         total += lineTotal;
         return {
           id: l.item_id,
+          item_id: l.item_id,
           name_en: masterItem?.name_en || l.name_en,
           name_ta: masterItem?.name_ta || l.name_ta,
           qty: l.qty,
+          pack_size: packSize,
+          pack_count: packCount,
+          pack_price: packPrice,
+          pack_label: packLabel,
           unit: masterItem?.unit || l.unit,
           price,
           lineTotal,
+          line_total: lineTotal,
         };
       });
 

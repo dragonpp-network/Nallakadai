@@ -1706,5 +1706,10 @@ export async function restoreDatabaseZipAction(
   return restoreStoreFromJson(storeJsonStr);
 }
 
+export async function getStorageDiagnosticsAction(userId: string = DEFAULT_SUPER_ADMIN_ID) {
+  await requireAdmin(userId);
+  return getStorageDiagnostics();
+}
+
 
 
