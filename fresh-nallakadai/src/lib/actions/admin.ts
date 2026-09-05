@@ -6,6 +6,9 @@ import {
   saveLocalStore,
   resetLocalStoreDemoData,
   clearLocalStoreOrders,
+  restoreStoreFromJson,
+  listStoreBackups,
+  restoreFromBackupFile,
 } from "@/lib/data-store";
 
 /**
@@ -1132,6 +1135,51 @@ export async function deleteBrandAction(
   }
 
   return { success: true };
+}
+
+/**
+ * ============================================================================
+ * DATABASE INTEGRITY, BACKUP & RESTORE ACTIONS
+ * ============================================================================
+ */
+export async function getDatabaseOverviewAction(userId: string = DEFAULT_SUPER_ADMIN_ID) {
+  await requireAdmin(userId);
+  const store = getLocalStore();
+  const backups = listStoreBackups();
+
+  return {
+    customerCount: (store.customers || []).length,
+    itemCount: (store.items || []).length,
+    cycleCount: (store.cycles || []).length,
+    orderCount: (store.orders || []).length,
+    branchCount: (store.branches || []).length,
+    brandCount: (store.brands || []).length,
+    categoryCount: (store.categories || []).length,
+    couponCount: (store.coupons || []).length,
+    backups,
+  };
+}
+
+export async function exportDatabaseJsonAction(userId: string = DEFAULT_SUPER_ADMIN_ID) {
+  await requireAdmin(userId);
+  const store = getLocalStore();
+  return JSON.stringify(store, null, 2);
+}
+
+export async function restoreDatabaseAction(
+  userId: string = DEFAULT_SUPER_ADMIN_ID,
+  jsonContent: string
+) {
+  await requireAdmin(userId);
+  return restoreStoreFromJson(jsonContent);
+}
+
+export async function restoreSnapshotByNameAction(
+  userId: string = DEFAULT_SUPER_ADMIN_ID,
+  filename: string
+) {
+  await requireAdmin(userId);
+  return restoreFromBackupFile(filename);
 }
 
 

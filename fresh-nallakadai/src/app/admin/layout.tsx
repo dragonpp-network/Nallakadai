@@ -24,12 +24,14 @@ import {
   Award,
   Store,
   TicketPercent,
+  Database,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 const navItems = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { label: "Backup & Restore", href: "/admin/backup", icon: Database },
   { label: "Cycles", href: "/admin/cycles", icon: Calendar },
   { label: "Availability", href: "/admin/availability", icon: Layers },
   { label: "Orders", href: "/admin/orders", icon: ShoppingBag },
