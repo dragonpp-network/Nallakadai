@@ -105,8 +105,8 @@ export default function AdminCustomersPage() {
     }
   }
 
-  // Download Sample Customer CSV Template
-  function downloadSampleCustomerCsv() {
+  // Download Sample Customer CSV / Excel Template
+  function downloadSampleCustomerCsv(format: "xlsx" | "csv" = "xlsx") {
     const sampleRows = [
       {
         Name: "Lavanya",
@@ -153,8 +153,9 @@ export default function AdminCustomersPage() {
     const ws = XLSX.utils.json_to_sheet(sampleRows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Customers_Template");
-    XLSX.writeFile(wb, "Nallakadai_Customer_Import_Template.xlsx");
-    toast.success("Sample template downloaded!");
+    const filename = format === "csv" ? "Nallakadai_Customer_Import_Template.csv" : "Nallakadai_Customer_Import_Template.xlsx";
+    XLSX.writeFile(wb, filename);
+    toast.success(`Sample customer ${format.toUpperCase()} template downloaded!`);
   }
 
   // Bulk CSV Upload handler with Fuzzy Header Normalization
@@ -254,11 +255,18 @@ export default function AdminCustomersPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            onClick={() => downloadSampleCustomerCsv("xlsx")}
+            variant="outline"
+            className="rounded-xl text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/5 font-semibold"
+          >
+            <Download className="h-4 w-4" /> Download Sample Template (.xlsx)
+          </Button>
           <Button onClick={() => setCsvModalOpen(true)} variant="outline" className="rounded-xl text-xs gap-1.5">
             <Upload className="h-4 w-4" /> Bulk CSV Import
           </Button>
-          <Button onClick={openCreateModal} className="rounded-xl bg-primary text-white text-xs gap-1.5">
+          <Button onClick={openCreateModal} className="rounded-xl bg-primary text-white text-xs gap-1.5 font-bold">
             <Plus className="h-4 w-4" /> Add Customer
           </Button>
         </div>
@@ -446,25 +454,39 @@ export default function AdminCustomersPage() {
           </DialogHeader>
 
           <div className="space-y-4 pt-2">
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Upload a spreadsheet with columns: <strong>Name, Mobile, AltMobile, Address, Area, DeliveryMode</strong>.
-            </p>
-
-            <div className="flex justify-start">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={downloadSampleCustomerCsv}
-                className="rounded-xl text-xs font-semibold gap-1.5 border-primary/30 text-primary hover:bg-primary/5"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Download Sample Template (.xlsx)
-              </Button>
+            <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 p-3.5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-xs text-amber-950">Need the standard spreadsheet template?</span>
+              </div>
+              <p className="text-[11px] text-amber-800 leading-relaxed">
+                Download the ready-to-fill template with pre-set columns: <strong>Name, Mobile, AltMobile, Address, Area, DeliveryMode</strong>.
+              </p>
+              <div className="flex gap-2 pt-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => downloadSampleCustomerCsv("xlsx")}
+                  className="rounded-xl text-xs font-bold gap-1.5 bg-amber-600 hover:bg-amber-700 text-white h-8 shadow-sm"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Download Sample (.xlsx)
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => downloadSampleCustomerCsv("csv")}
+                  className="rounded-xl text-xs font-semibold gap-1.5 border-amber-600/40 text-amber-900 hover:bg-amber-500/10 h-8"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Download (.csv)
+                </Button>
+              </div>
             </div>
 
-            <div className="border-2 border-dashed border-border rounded-2xl p-6 text-center">
-              <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+            <div className="border-2 border-dashed border-border rounded-2xl p-6 text-center space-y-2">
+              <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-1" />
+              <div className="text-xs font-semibold text-foreground">Select your filled customer spreadsheet</div>
               <input
                 type="file"
                 accept=".csv, .xlsx, .xls"
