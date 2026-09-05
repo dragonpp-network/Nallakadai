@@ -4,6 +4,9 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   getMasterItemsAction,
   saveMasterItemAction,
+  deleteMasterItemAction,
+  bulkDeleteItemsAction,
+  bulkSaveMasterItemsAction,
   getCategoriesAdminAction,
   getBrandsAction,
 } from "@/lib/actions/admin";
@@ -23,6 +26,7 @@ import {
   Search,
   Plus,
   Edit,
+  Trash2,
   Package,
   Award,
   Layers,
@@ -31,7 +35,14 @@ import {
   FolderTree,
   ChevronDown,
   ChevronUp,
+  Download,
+  Upload,
+  FileSpreadsheet,
+  CheckSquare,
+  Square,
+  AlertCircle,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 import { toast } from "sonner";
 
 export default function AdminItemsPage() {
@@ -49,8 +60,15 @@ export default function AdminItemsPage() {
   // Collapsed categories state for grouped view
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
 
+  // Modals & Selection
   const [modalOpen, setModalOpen] = useState(false);
+  const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null);
+
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [singleDeleteTarget, setSingleDeleteTarget] = useState<any | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Form State
   const [nameEn, setNameEn] = useState("");
@@ -60,7 +78,7 @@ export default function AdminItemsPage() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [unit, setUnit] = useState("Kg");
   const [presetsStr, setPresetsStr] = useState("0.5, 1, 2");
-  const [minQty, setMinQty] = useState(0.25);
+  const [minQty, setMinQty] = useState(0.5);
   const [maxQty, setMaxQty] = useState(10);
   const [procurementCost, setProcurementCost] = useState(30);
   const [sellingPrice, setSellingPrice] = useState(50);
@@ -101,7 +119,7 @@ export default function AdminItemsPage() {
     setImageUrl(null);
     setUnit("Kg");
     setPresetsStr("0.5, 1, 2");
-    setMinQty(0.25);
+    setMinQty(0.5);
     setMaxQty(10);
     setProcurementCost(30);
     setSellingPrice(50);
@@ -119,12 +137,12 @@ export default function AdminItemsPage() {
     setImageUrl(item.image_url || null);
     setUnit(item.unit);
     setPresetsStr((item.presets || []).join(", "));
-    setMinQty(Number(item.min_qty));
-    setMaxQty(Number(item.max_qty));
+    setMinQty(Number(item.min_qty !== undefined ? item.min_qty : (item.presets?.[0] || 0.5)));
+    setMaxQty(Number(item.max_qty || 10));
     setProcurementCost(Number(item.procurement_cost !== undefined ? item.procurement_cost : Math.round((item.price || 50) * 0.7)));
     setSellingPrice(Number(item.selling_price || item.price || 50));
     setDiscountPercent(Number(item.discount_percent || 0));
-    setActive(item.active);
+    setActive(item.active !== false);
     setModalOpen(true);
   }
 
@@ -144,9 +162,9 @@ export default function AdminItemsPage() {
         brandId: brandId || null,
         imageUrl,
         unit,
-        presets,
-        minQty: Number(minQty),
-        maxQty: Number(maxQty),
+        presets: presets.length > 0 ? presets : [0.5, 1, 2],
+        minQty: Number(minQty || presets[0] || 1),
+        maxQty: Number(maxQty || 10),
         procurementCost: Number(procurementCost),
         sellingPrice: Number(sellingPrice),
         discountPercent: Number(discountPercent),
@@ -159,6 +177,202 @@ export default function AdminItemsPage() {
     } catch (err: any) {
       toast.error("Failed to save item");
     }
+  }
+
+  // Download Sample Master Items Template (.xlsx / .csv)
+  function downloadSampleItemsTemplate(format: "xlsx" | "csv" = "xlsx") {
+    const sampleRows = [
+      {
+        NameEn: "Country Tomato",
+        NameTa: "நாட்டுத் தக்காளி",
+        Category: "Vegetables",
+        Unit: "Kg",
+        Presets: "0.5, 1, 2",
+        MinQty: 0.5,
+        MaxQty: 10,
+        ProcurementCost: 25,
+        MRP: 45,
+        DiscountPercent: 10,
+        Brand: "Direct Farm",
+        Active: "TRUE",
+      },
+      {
+        NameEn: "Green Chilli",
+        NameTa: "பச்சை மிளகாய்",
+        Category: "Vegetables",
+        Unit: "Gram",
+        Presets: "100, 250, 500",
+        MinQty: 100,
+        MaxQty: 1000,
+        ProcurementCost: 15,
+        MRP: 25,
+        DiscountPercent: 0,
+        Brand: "Direct Farm",
+        Active: "TRUE",
+      },
+      {
+        NameEn: "Country Drumstick",
+        NameTa: "நாட்டு முருங்கைக்காய்",
+        Category: "Vegetables",
+        Unit: "Nos",
+        Presets: "2, 5, 10",
+        MinQty: 2,
+        MaxQty: 25,
+        ProcurementCost: 20,
+        MRP: 35,
+        DiscountPercent: 0,
+        Brand: "Direct Farm",
+        Active: "TRUE",
+      },
+      {
+        NameEn: "Spinach (Pasalai)",
+        NameTa: "பசலைக்கீரை",
+        Category: "Greens",
+        Unit: "Nos",
+        Presets: "1, 2, 3",
+        MinQty: 1,
+        MaxQty: 5,
+        ProcurementCost: 15,
+        MRP: 25,
+        DiscountPercent: 0,
+        Brand: "Direct Farm",
+        Active: "TRUE",
+      },
+      {
+        NameEn: "A2 Cow Milk",
+        NameTa: "நாட்டுப் பசு பால்",
+        Category: "Dairy",
+        Unit: "Litre",
+        Presets: "0.5, 1, 2",
+        MinQty: 0.5,
+        MaxQty: 5,
+        ProcurementCost: 45,
+        MRP: 65,
+        DiscountPercent: 0,
+        Brand: "Nalla Dairy",
+        Active: "TRUE",
+      },
+      {
+        NameEn: "Cold Pressed Groundnut Oil",
+        NameTa: "மரச்செக்கு நிலக்கடலை எண்ணெய்",
+        Category: "Vegan",
+        Unit: "Litre",
+        Presets: "0.5, 1",
+        MinQty: 0.5,
+        MaxQty: 5,
+        ProcurementCost: 210,
+        MRP: 280,
+        DiscountPercent: 5,
+        Brand: "Nalla Chekku",
+        Active: "TRUE",
+      },
+      {
+        NameEn: "Fresh Ginger",
+        NameTa: "இஞ்சி",
+        Category: "Vegetables",
+        Unit: "Gram",
+        Presets: "100, 250, 500",
+        MinQty: 100,
+        MaxQty: 1000,
+        ProcurementCost: 30,
+        MRP: 50,
+        DiscountPercent: 0,
+        Brand: "Direct Farm",
+        Active: "TRUE",
+      },
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(sampleRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Items_Template");
+    const filename = format === "csv" ? "Nallakadai_Master_Items_Template.csv" : "Nallakadai_Master_Items_Template.xlsx";
+    XLSX.writeFile(wb, filename);
+    toast.success(`Sample Master Items ${format.toUpperCase()} template downloaded!`);
+  }
+
+  // Bulk Master Items Upload with Fuzzy Column Matching
+  function handleCsvUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: "binary" });
+        const wsName = wb.SheetNames[0];
+        const rows = XLSX.utils.sheet_to_json<any>(wb.Sheets[wsName]);
+
+        const parsedItems: any[] = [];
+        let skipped = 0;
+
+        for (const rawRow of rows) {
+          const norm: Record<string, any> = {};
+          for (const k of Object.keys(rawRow)) {
+            const cleanKey = k.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+            norm[cleanKey] = rawRow[k];
+          }
+
+          const nameEn = String(
+            norm.nameen || norm.itemname || norm.name || norm.item || norm.productname || ""
+          ).trim();
+
+          if (!nameEn) {
+            skipped++;
+            continue;
+          }
+
+          const nameTa = String(
+            norm.nameta || norm.tamilname || norm.tamil || norm.nameinTamil || ""
+          ).trim();
+
+          const category = String(
+            norm.category || norm.categoryname || norm.type || "Vegetables"
+          ).trim();
+
+          const unit = String(
+            norm.unit || norm.uom || norm.unitofmeasure || "Kg"
+          ).trim();
+
+          const presets = norm.presets || norm.packsizes || norm.variants || norm.quantities || "";
+          const minQty = norm.minqty || norm.minimumqty || norm.minorder || undefined;
+          const maxQty = norm.maxqty || norm.maximumqty || norm.maxorder || undefined;
+          const mrp = norm.mrp || norm.sellingprice || norm.price || norm.retailprice || 50;
+          const procurementCost = norm.procurementcost || norm.buyingcost || norm.cost || norm.farmprice || undefined;
+          const discountPercent = norm.discountpercent || norm.discount || norm.offer || 0;
+          const brand = norm.brand || norm.brandname || norm.farm || "Direct Farm";
+          const activeRaw = String(norm.active !== undefined ? norm.active : "true").toLowerCase();
+          const active = activeRaw === "true" || activeRaw === "1" || activeRaw === "yes";
+
+          parsedItems.push({
+            nameEn,
+            nameTa,
+            category,
+            unit,
+            presets,
+            minQty,
+            maxQty,
+            sellingPrice: mrp,
+            procurementCost,
+            discountPercent,
+            brand,
+            active,
+          });
+        }
+
+        if (parsedItems.length > 0) {
+          const res = await bulkSaveMasterItemsAction("demo-admin", parsedItems);
+          toast.success(`Import complete! Added: ${res.addedCount}, Updated: ${res.updatedCount} (${skipped} invalid skipped).`);
+          setCsvModalOpen(false);
+          loadData();
+        } else {
+          toast.error("No valid items with English item names found in spreadsheet.");
+        }
+      } catch (err: any) {
+        toast.error("Failed to parse spreadsheet file");
+      }
+    };
+    reader.readAsBinaryString(file);
   }
 
   function toggleCategoryCollapse(catId: string) {
@@ -186,6 +400,58 @@ export default function AdminItemsPage() {
     });
   }, [items, search, selectedCategoryTab, selectedBrandFilter]);
 
+  // Selection Handlers
+  const isAllSelected = filtered.length > 0 && filtered.every((i) => selectedIds.includes(i.id));
+
+  function toggleSelectAll() {
+    if (isAllSelected) {
+      const filteredIds = new Set(filtered.map((i) => i.id));
+      setSelectedIds((prev) => prev.filter((id) => !filteredIds.has(id)));
+    } else {
+      const newSelected = Array.from(new Set([...selectedIds, ...filtered.map((i) => i.id)]));
+      setSelectedIds(newSelected);
+    }
+  }
+
+  function toggleSelectRow(id: string) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  }
+
+  // Deletion Handlers
+  async function confirmBulkDelete() {
+    if (selectedIds.length === 0) return;
+    setIsDeleting(true);
+    try {
+      const res = await bulkDeleteItemsAction("demo-admin", selectedIds);
+      toast.success(`Successfully deleted ${res.deletedCount} master item(s)!`);
+      setSelectedIds([]);
+      setDeleteConfirmOpen(false);
+      loadData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete selected items");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  async function confirmSingleDelete() {
+    if (!singleDeleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await deleteMasterItemAction("demo-admin", singleDeleteTarget.id);
+      toast.success(`Item "${singleDeleteTarget.name_en}" deleted!`);
+      setSelectedIds((prev) => prev.filter((id) => id !== singleDeleteTarget.id));
+      setSingleDeleteTarget(null);
+      loadData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete item");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   // Group items by category for categorized view
   const categorizedGroups = useMemo(() => {
     const groups: { category: any; items: any[] }[] = [];
@@ -203,12 +469,19 @@ export default function AdminItemsPage() {
       }
     }
 
-    // Include uncategorized items if any
-    const uncategorized = filtered.filter((i) => !categories.some((c) => c.id === i.category_id));
-    if (uncategorized.length > 0) {
+    // Unassigned items category
+    const uncategorizedItems = filtered.filter(
+      (i) => !categories.some((c) => c.id === i.category_id)
+    );
+    if (uncategorizedItems.length > 0) {
       groups.push({
-        category: { id: "uncat", name: "Uncategorized", name_ta: "வகைப்படுத்தப்படாதவை", tint: "#f3f4f6" },
-        items: uncategorized,
+        category: {
+          id: "uncategorized",
+          name: "General / Other Produce",
+          name_ta: "இதர பொருட்கள்",
+          tint: "#F3F4F6",
+        },
+        items: uncategorizedItems,
       });
     }
 
@@ -217,17 +490,42 @@ export default function AdminItemsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Top Header & Action */}
+      {/* Top Header & Quick View Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-serif font-bold text-foreground">Master Item Catalogue</h1>
+          <h1 className="text-2xl font-serif font-bold text-foreground">Produce Master Directory</h1>
           <p className="text-xs text-muted-foreground">
-            Manage produce items organized under categories, photos (max 1024x1024), and Brand partners
+            Manage master produce catalogue, pack size variants, pricing, and bulk import/export
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* View Mode Toggle */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Download Sample Templates */}
+          <Button
+            onClick={() => downloadSampleItemsTemplate("xlsx")}
+            variant="outline"
+            className="rounded-xl text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/5 font-semibold"
+          >
+            <Download className="h-4 w-4" /> Sample (.xlsx)
+          </Button>
+          <Button
+            onClick={() => downloadSampleItemsTemplate("csv")}
+            variant="outline"
+            className="rounded-xl text-xs gap-1.5 border-muted-foreground/30 text-muted-foreground hover:bg-muted font-semibold"
+          >
+            <FileSpreadsheet className="h-4 w-4" /> Sample (.csv)
+          </Button>
+
+          {/* Bulk Import */}
+          <Button
+            onClick={() => setCsvModalOpen(true)}
+            variant="outline"
+            className="rounded-xl text-xs gap-1.5 bg-primary/5 text-primary border-primary/30 font-bold"
+          >
+            <Upload className="h-4 w-4" /> Bulk Import
+          </Button>
+
+          {/* View Mode Toggle Switcher */}
           <div className="flex items-center rounded-2xl border bg-card p-1 shadow-sm">
             <button
               type="button"
@@ -237,7 +535,7 @@ export default function AdminItemsPage() {
                   ? "bg-primary text-white shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               }`}
-              title="Grouped by Category"
+              title="Category Grouped View"
             >
               <FolderTree className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">By Category</span>
@@ -270,7 +568,7 @@ export default function AdminItemsPage() {
             </button>
           </div>
 
-          <Button onClick={() => openCreateModal()} className="rounded-2xl bg-primary text-white text-xs gap-1.5 shadow">
+          <Button onClick={() => openCreateModal()} className="rounded-2xl bg-primary text-white text-xs gap-1.5 shadow font-bold">
             <Plus className="h-4 w-4" /> Add Item
           </Button>
         </div>
@@ -341,6 +639,38 @@ export default function AdminItemsPage() {
         })}
       </div>
 
+      {/* Sticky Multi-Select Batch Action Bar */}
+      {selectedIds.length > 0 && (
+        <div className="sticky top-4 z-20 rounded-2xl bg-gradient-to-r from-red-600 to-rose-700 text-white p-3.5 px-5 shadow-xl flex items-center justify-between gap-4 animate-in slide-in-from-top-2 border border-white/20">
+          <div className="flex items-center gap-2.5">
+            <div className="h-7 w-7 rounded-xl bg-white/20 flex items-center justify-center font-bold font-mono text-xs">
+              {selectedIds.length}
+            </div>
+            <span className="text-xs font-semibold">
+              {selectedIds.length} produce item(s) selected
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setSelectedIds([])}
+              className="rounded-xl text-xs bg-white/10 hover:bg-white/20 text-white border-white/30 h-8"
+            >
+              Clear Selection
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => setDeleteConfirmOpen(true)}
+              className="rounded-xl text-xs font-bold gap-1.5 bg-white text-red-700 hover:bg-white/90 shadow h-8"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Delete Selected ({selectedIds.length})
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Renderers based on View Mode */}
       {loading ? (
         <div className="p-12 text-center text-muted-foreground animate-pulse">Loading master catalogue...</div>
@@ -352,7 +682,7 @@ export default function AdminItemsPage() {
         </div>
       ) : viewMode === "grouped" ? (
         /* ========================================================================= */
-        /* 1. CATEGORIZED / GROUPED VIEW (Fast Category Navigation)                  */
+        /* 1. CATEGORIZED / GROUPED VIEW                                             */
         /* ========================================================================= */
         <div className="space-y-6">
           {categorizedGroups.map(({ category, items: groupItems }) => {
@@ -418,100 +748,115 @@ export default function AdminItemsPage() {
                 {/* Group Items Grid */}
                 {!isCollapsed && (
                   <div className="p-4 grid md:grid-cols-2 lg:grid-cols-3 gap-3 bg-card">
-                    {groupItems.map((item) => (
-                      <Card
-                        key={item.id}
-                        className="p-4 rounded-2xl border bg-background/80 shadow-sm hover:shadow-md transition space-y-2.5 flex flex-col justify-between"
-                      >
-                        <div className="space-y-2">
-                          <div className="flex items-start justify-between gap-2.5">
-                            <div className="flex items-center gap-2.5">
-                              <GenericProduceImage
-                                src={item.image_url}
-                                alt={item.name_en}
-                                fallbackType="product"
-                                className="h-11 w-11 rounded-xl object-cover border shadow-sm shrink-0"
-                              />
-                              <div>
-                                <h3 className="font-bold text-sm text-foreground leading-tight">{item.name_en}</h3>
-                                <p className="text-xs font-tamil text-muted-foreground">{item.name_ta || "—"}</p>
+                    {groupItems.map((item) => {
+                      const isSelected = selectedIds.includes(item.id);
+                      return (
+                        <Card
+                          key={item.id}
+                          className={`p-4 rounded-2xl border bg-background/80 shadow-sm hover:shadow-md transition space-y-2.5 flex flex-col justify-between ${
+                            isSelected ? "ring-2 ring-primary bg-primary/5" : ""
+                          }`}
+                        >
+                          <div className="space-y-2">
+                            <div className="flex items-start justify-between gap-2.5">
+                              <div className="flex items-center gap-2.5">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleSelectRow(item.id);
+                                  }}
+                                  className="text-muted-foreground hover:text-foreground"
+                                >
+                                  {isSelected ? (
+                                    <CheckSquare className="h-4 w-4 text-primary" />
+                                  ) : (
+                                    <Square className="h-4 w-4" />
+                                  )}
+                                </button>
+                                <GenericProduceImage
+                                  src={item.image_url}
+                                  alt={item.name_en}
+                                  fallbackType="product"
+                                  className="h-11 w-11 rounded-xl object-cover border shadow-sm shrink-0"
+                                />
+                                <div>
+                                  <h3 className="font-bold text-sm text-foreground leading-tight">{item.name_en}</h3>
+                                  <p className="text-xs font-tamil text-muted-foreground">{item.name_ta || "—"}</p>
+                                </div>
                               </div>
+
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  item.active ? "bg-emerald-500/10 text-emerald-700" : "bg-rose-500/10 text-rose-700"
+                                }`}
+                              >
+                                {item.active ? "Active" : "Hidden"}
+                              </span>
                             </div>
 
-                            <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                item.active ? "bg-emerald-500/10 text-emerald-700" : "bg-rose-500/10 text-rose-700"
-                              }`}
-                            >
-                              {item.active ? "Active" : "Hidden"}
-                            </span>
+                            {item.brands && (
+                              <div className="flex items-center gap-1.5 text-xs text-primary font-medium bg-primary/5 p-1 px-2 rounded-lg w-fit">
+                                <Award className="h-3 w-3" />
+                                <span>{item.brands.name}</span>
+                              </div>
+                            )}
+
+                            {/* Presets & Pack Variants */}
+                            <div className="flex items-center gap-1 flex-wrap pt-0.5">
+                              <span className="text-[10px] text-muted-foreground uppercase font-bold">Packs:</span>
+                              {(item.presets || []).map((preset: number) => (
+                                <span
+                                  key={preset}
+                                  className="rounded-lg bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground font-mono"
+                                >
+                                  {preset} {item.unit}
+                                </span>
+                              ))}
+                            </div>
                           </div>
 
-                          {item.brands && (
-                            <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-900 bg-amber-500/10 px-2 py-0.5 rounded-lg">
-                              <Award className="h-3 w-3 text-amber-600" />
-                              <span>{item.brands.name}</span>
-                            </div>
-                          )}
-
-                          {/* Pricing & Customer Price Block */}
-                          <div className="bg-primary/5 border border-primary/20 p-2.5 rounded-xl flex items-center justify-between text-xs">
+                          <div className="pt-2 border-t flex items-center justify-between">
                             <div>
-                              <span className="text-[10px] text-muted-foreground block">Customer Price</span>
                               <div className="flex items-baseline gap-1.5">
-                                <span className="font-extrabold text-sm text-primary font-mono">
-                                  ₹{item.price}{" "}
-                                  <span className="text-[10px] font-normal text-muted-foreground">/ {item.unit}</span>
+                                <span className="font-bold text-base text-primary font-mono">
+                                  ₹{item.price}
                                 </span>
-                                {item.selling_price && item.selling_price > item.price && (
-                                  <span className="text-[10px] text-muted-foreground line-through font-mono">
+                                <span className="text-[11px] text-muted-foreground">/{item.unit}</span>
+                                {item.selling_price > item.price && (
+                                  <span className="text-[11px] text-muted-foreground line-through font-mono">
                                     ₹{item.selling_price}
                                   </span>
                                 )}
                               </div>
+                              <div className="text-[10px] text-muted-foreground">
+                                Cost: <span className="font-mono font-medium">₹{item.procurement_cost || "—"}</span>
+                              </div>
                             </div>
 
-                            <div className="text-right text-[11px] space-y-0.5">
-                              {item.procurement_cost !== undefined && (
-                                <div className="text-muted-foreground">
-                                  Cost: <strong className="text-foreground font-mono">₹{item.procurement_cost}</strong>
-                                </div>
-                              )}
-                              {item.discount_percent > 0 ? (
-                                <Badge className="bg-emerald-600 text-white text-[9px] px-1.5 py-0 font-bold">
-                                  {item.discount_percent}% OFF
-                                </Badge>
-                              ) : item.procurement_cost && item.price > item.procurement_cost ? (
-                                <span className="text-[10px] text-emerald-700 font-semibold">
-                                  Margin: {Math.round(((item.price - item.procurement_cost) / item.price) * 100)}%
-                                </span>
-                              ) : null}
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openEditModal(item)}
+                                className="rounded-xl text-xs h-8 px-2.5"
+                              >
+                                <Edit className="h-3 w-3 mr-1" /> Edit
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setSingleDeleteTarget(item)}
+                                className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 px-2"
+                                title="Delete item"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
                             </div>
                           </div>
-
-                          <div className="bg-muted/40 p-2 rounded-xl text-[11px] space-y-0.5 text-muted-foreground">
-                            <div className="flex justify-between">
-                              <span>Unit: <strong>{item.unit}</strong></span>
-                              <span>Limits: <strong>{item.min_qty}–{item.max_qty}</strong></span>
-                            </div>
-                            <div className="truncate">
-                              Presets: <strong>{(item.presets || []).join(", ") || "None"}</strong>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex justify-end pt-1 border-t">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openEditModal(item)}
-                            className="rounded-xl text-xs gap-1 h-7 px-2.5"
-                          >
-                            <Edit className="h-3 w-3" /> Edit
-                          </Button>
-                        </div>
-                      </Card>
-                    ))}
+                        </Card>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -523,266 +868,417 @@ export default function AdminItemsPage() {
         /* 2. FLAT ALL GRID VIEW                                                     */
         /* ========================================================================= */
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((item) => (
-            <Card key={item.id} className="p-5 rounded-3xl border bg-card shadow-sm hover:shadow-md transition space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <GenericProduceImage
-                    src={item.image_url}
-                    alt={item.name_en}
-                    fallbackType="product"
-                    className="h-12 w-12 rounded-2xl object-cover border shadow-sm shrink-0"
-                  />
-                  <div>
-                    <h3 className="font-serif font-bold text-base text-foreground leading-tight">
-                      {item.name_en}
-                    </h3>
-                    <p className="text-sm font-tamil text-muted-foreground">{item.name_ta || "—"}</p>
-                  </div>
-                </div>
-
-                <Badge
-                  style={{ backgroundColor: item.categories?.tint || "#EAF3DD", color: "#1c2a1c" }}
-                  className="text-[10px] font-semibold border shrink-0"
-                >
-                  {item.categories?.name || "General"}
-                </Badge>
-              </div>
-
-              {item.brands && (
-                <div className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 text-[11px] font-semibold text-amber-900">
-                  <Award className="h-3 w-3 text-amber-600" />
-                  <span>{item.brands.name}</span>
-                </div>
-              )}
-
-              {/* Pricing & Customer Price Block */}
-              <div className="bg-primary/5 border border-primary/20 p-3 rounded-2xl flex items-center justify-between text-xs">
-                <div>
-                  <span className="text-[10px] text-muted-foreground block">Customer Price</span>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="font-extrabold text-base text-primary font-mono">
-                      ₹{item.price}{" "}
-                      <span className="text-xs font-normal text-muted-foreground">/ {item.unit}</span>
-                    </span>
-                    {item.selling_price && item.selling_price > item.price && (
-                      <span className="text-xs text-muted-foreground line-through font-mono">
-                        ₹{item.selling_price}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="text-right text-xs space-y-0.5">
-                  {item.procurement_cost !== undefined && (
-                    <div className="text-muted-foreground text-[11px]">
-                      Cost: <strong className="text-foreground font-mono">₹{item.procurement_cost}</strong>
+          {filtered.map((item) => {
+            const isSelected = selectedIds.includes(item.id);
+            return (
+              <Card
+                key={item.id}
+                className={`p-4 rounded-2xl border bg-card shadow-sm hover:shadow-md transition space-y-3 flex flex-col justify-between ${
+                  isSelected ? "ring-2 ring-primary bg-primary/5" : ""
+                }`}
+              >
+                <div className="space-y-2.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleSelectRow(item.id)}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        {isSelected ? (
+                          <CheckSquare className="h-4 w-4 text-primary" />
+                        ) : (
+                          <Square className="h-4 w-4" />
+                        )}
+                      </button>
+                      <GenericProduceImage
+                        src={item.image_url}
+                        alt={item.name_en}
+                        fallbackType="product"
+                        className="h-12 w-12 rounded-2xl object-cover border shadow-sm shrink-0"
+                      />
+                      <div>
+                        <h3 className="font-bold text-sm text-foreground">{item.name_en}</h3>
+                        <p className="text-xs font-tamil text-muted-foreground">{item.name_ta || "—"}</p>
+                      </div>
                     </div>
-                  )}
-                  {item.discount_percent > 0 ? (
-                    <Badge className="bg-emerald-600 text-white text-[10px] px-2 py-0.5 font-bold">
-                      {item.discount_percent}% OFF
-                    </Badge>
-                  ) : item.procurement_cost && item.price > item.procurement_cost ? (
-                    <span className="text-[11px] text-emerald-700 font-semibold">
-                      Margin: {Math.round(((item.price - item.procurement_cost) / item.price) * 100)}%
-                    </span>
-                  ) : null}
-                </div>
-              </div>
 
-              <div className="bg-muted/50 p-3 rounded-2xl text-xs space-y-1 text-muted-foreground">
-                <div className="flex justify-between">
-                  <span>Unit: <strong className="text-foreground">{item.unit}</strong></span>
-                  <span>Presets: <strong className="text-foreground">{(item.presets || []).join(", ") || "—"}</strong></span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Order Limit: <strong className="text-foreground">{item.min_qty} – {item.max_qty} {item.unit}</strong></span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-1 border-t">
-                <span className={item.active ? "text-emerald-600 text-xs font-semibold" : "text-rose-600 text-xs font-semibold"}>
-                  {item.active ? "Active" : "Disabled"}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => openEditModal(item)}
-                  className="rounded-xl text-xs gap-1 h-8"
-                >
-                  <Edit className="h-3.5 w-3.5" /> Edit Item
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        /* ========================================================================= */
-        /* 3. COMPACT TABLE VIEW                                                     */
-        /* ========================================================================= */
-        <div className="rounded-3xl border bg-card shadow-sm overflow-hidden overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead className="bg-muted/60 text-muted-foreground font-semibold border-b">
-              <tr>
-                <th className="py-3 px-4">Photo</th>
-                <th className="py-3 px-4">Product Name</th>
-                <th className="py-3 px-4">Category</th>
-                <th className="py-3 px-4">Brand Partner</th>
-                <th className="py-3 px-4">Buying Cost</th>
-                <th className="py-3 px-4">MRP / Base</th>
-                <th className="py-3 px-4">Discount</th>
-                <th className="py-3 px-4 font-bold text-primary">Customer Price</th>
-                <th className="py-3 px-4">Unit</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/50">
-              {filtered.map((item) => (
-                <tr key={item.id} className="hover:bg-muted/30 transition">
-                  <td className="py-2 px-4">
-                    <GenericProduceImage
-                      src={item.image_url}
-                      alt={item.name_en}
-                      fallbackType="product"
-                      className="h-8 w-8 rounded-lg object-cover border shrink-0"
-                    />
-                  </td>
-                  <td className="py-2 px-4">
-                    <div className="font-bold text-foreground">{item.name_en}</div>
-                    <div className="text-[11px] font-tamil text-muted-foreground">{item.name_ta || "—"}</div>
-                  </td>
-                  <td className="py-2 px-4">
-                    <Badge variant="outline" className="text-[10px]">
-                      {item.categories?.name || "General"}
-                    </Badge>
-                  </td>
-                  <td className="py-2 px-4 text-muted-foreground">
-                    {item.brands?.name || "Direct Farm"}
-                  </td>
-                  <td className="py-2 px-4 font-mono">
-                    ₹{item.procurement_cost !== undefined ? item.procurement_cost : "—"}
-                  </td>
-                  <td className="py-2 px-4 font-mono text-muted-foreground">
-                    ₹{item.selling_price || item.price}
-                  </td>
-                  <td className="py-2 px-4">
-                    {item.discount_percent > 0 ? (
-                      <Badge className="bg-emerald-600 text-white text-[9px] px-1 py-0 font-bold">
-                        {item.discount_percent}% OFF
-                      </Badge>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td className="py-2 px-4 font-bold text-primary font-mono text-sm">
-                    ₹{item.price} / {item.unit}
-                  </td>
-                  <td className="py-2 px-4 text-muted-foreground">{item.unit}</td>
-                  <td className="py-2 px-4">
                     <span
                       className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                         item.active ? "bg-emerald-500/10 text-emerald-700" : "bg-rose-500/10 text-rose-700"
                       }`}
                     >
-                      {item.active ? "Active" : "Disabled"}
+                      {item.active ? "Active" : "Hidden"}
                     </span>
-                  </td>
-                  <td className="py-2 px-4 text-right">
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs px-2 py-0.5 rounded-lg bg-muted font-medium text-foreground">
+                      {item.categories?.name || "Uncategorized"}
+                    </span>
+                    {item.brands && (
+                      <span className="text-xs px-2 py-0.5 rounded-lg bg-primary/10 text-primary font-medium">
+                        {item.brands.name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t flex items-center justify-between">
+                  <div>
+                    <div className="font-bold text-base text-primary font-mono">
+                      ₹{item.price}{" "}
+                      <span className="text-xs font-normal text-muted-foreground">/{item.unit}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openEditModal(item)}
+                      className="rounded-xl text-xs h-8 px-2.5"
+                    >
+                      <Edit className="h-3 w-3 mr-1" /> Edit
+                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => openEditModal(item)}
-                      className="h-7 text-xs gap-1"
+                      onClick={() => setSingleDeleteTarget(item)}
+                      className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 px-2"
+                      title="Delete item"
                     >
-                      <Edit className="h-3 w-3" /> Edit
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
         </div>
+      ) : (
+        /* ========================================================================= */
+        /* 3. COMPACT TABLE LIST VIEW                                                */
+        /* ========================================================================= */
+        <Card className="rounded-2xl border overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-muted/80 text-xs uppercase text-muted-foreground font-semibold border-b">
+                <tr>
+                  <th className="p-4 w-12 text-center">
+                    <button
+                      type="button"
+                      onClick={toggleSelectAll}
+                      className="text-muted-foreground hover:text-foreground"
+                      title={isAllSelected ? "Deselect all" : "Select all visible"}
+                    >
+                      {isAllSelected ? (
+                        <CheckSquare className="h-4 w-4 text-primary" />
+                      ) : (
+                        <Square className="h-4 w-4" />
+                      )}
+                    </button>
+                  </th>
+                  <th className="p-4">Produce Name</th>
+                  <th className="p-4">Category & Brand</th>
+                  <th className="p-4">Unit & Pack Sizes</th>
+                  <th className="p-4">MRP / Selling</th>
+                  <th className="p-4">Final Customer Price</th>
+                  <th className="p-4">Status</th>
+                  <th className="p-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {filtered.map((item) => {
+                  const isSelected = selectedIds.includes(item.id);
+                  return (
+                    <tr
+                      key={item.id}
+                      className={`hover:bg-muted/30 transition ${
+                        isSelected ? "bg-primary/5 font-medium" : ""
+                      }`}
+                    >
+                      <td className="p-4 text-center">
+                        <button
+                          type="button"
+                          onClick={() => toggleSelectRow(item.id)}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          {isSelected ? (
+                            <CheckSquare className="h-4 w-4 text-primary" />
+                          ) : (
+                            <Square className="h-4 w-4" />
+                          )}
+                        </button>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <GenericProduceImage
+                            src={item.image_url}
+                            alt={item.name_en}
+                            fallbackType="product"
+                            className="h-10 w-10 rounded-xl object-cover border shadow-sm shrink-0"
+                          />
+                          <div>
+                            <div className="font-bold text-foreground">{item.name_en}</div>
+                            <div className="text-xs font-tamil text-muted-foreground">{item.name_ta || "—"}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4 text-xs">
+                        <div className="font-medium text-foreground">{item.categories?.name || "Uncategorized"}</div>
+                        <div className="text-muted-foreground">{item.brands?.name || "Direct Farm"}</div>
+                      </td>
+                      <td className="p-4 text-xs">
+                        <span className="font-bold font-mono text-foreground">{item.unit}</span>
+                        <div className="text-[11px] text-muted-foreground font-mono">
+                          {(item.presets || []).join(", ")}
+                        </div>
+                      </td>
+                      <td className="p-4 text-xs font-mono">
+                        <div>₹{item.selling_price || item.price}</div>
+                        {item.discount_percent > 0 && (
+                          <div className="text-emerald-600 font-bold">{item.discount_percent}% off</div>
+                        )}
+                      </td>
+                      <td className="p-4 font-bold text-primary font-mono">₹{item.price} / {item.unit}</td>
+                      <td className="p-4">
+                        <Badge variant={item.active ? "default" : "secondary"} className="text-[10px]">
+                          {item.active ? "Active" : "Hidden"}
+                        </Badge>
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditModal(item)}
+                            className="h-8 text-xs gap-1"
+                          >
+                            <Edit className="h-3.5 w-3.5" /> Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSingleDeleteTarget(item)}
+                            className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 px-2"
+                            title="Delete item"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       )}
 
-      {/* Add / Edit Master Item Dialog */}
+      {/* CSV / Excel Bulk Import Modal */}
+      <Dialog open={csvModalOpen} onOpenChange={setCsvModalOpen}>
+        <DialogContent className="rounded-3xl max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-xl">Bulk Import Master Produce (Excel / CSV)</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 p-3.5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-xs text-amber-950">Download pre-formatted sample template</span>
+              </div>
+              <p className="text-[11px] text-amber-800 leading-relaxed">
+                Fill the columns: <strong>NameEn, NameTa, Category, Unit, Presets, MinQty, MaxQty, ProcurementCost, MRP, DiscountPercent, Brand, Active</strong>.
+              </p>
+              <div className="flex gap-2 pt-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => downloadSampleItemsTemplate("xlsx")}
+                  className="rounded-xl text-xs font-bold gap-1.5 bg-amber-600 hover:bg-amber-700 text-white h-8 shadow-sm"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Sample (.xlsx)
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => downloadSampleItemsTemplate("csv")}
+                  className="rounded-xl text-xs font-semibold gap-1.5 border-amber-600/40 text-amber-900 hover:bg-amber-500/10 h-8"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Sample (.csv)
+                </Button>
+              </div>
+            </div>
+
+            <div className="border-2 border-dashed border-border rounded-2xl p-6 text-center space-y-2">
+              <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-1" />
+              <div className="text-xs font-semibold text-foreground">Select your filled produce items spreadsheet</div>
+              <p className="text-[11px] text-muted-foreground">Supports .xlsx, .xls, and .csv files</p>
+              <input
+                type="file"
+                accept=".csv, .xlsx, .xls"
+                onChange={handleCsvUpload}
+                className="text-xs file:mr-2 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="rounded-3xl max-w-sm text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-red-100 text-red-600 mb-2">
+            <AlertCircle className="h-6 w-6" />
+          </div>
+          <DialogTitle className="text-lg font-bold">Delete Selected Items?</DialogTitle>
+          <p className="text-xs text-muted-foreground mt-2">
+            Are you sure you want to permanently delete <strong>{selectedIds.length}</strong> selected produce item(s) from the master catalogue?
+          </p>
+          <div className="flex gap-2 justify-center mt-5">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirmOpen(false)}
+              className="rounded-xl text-xs"
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmBulkDelete}
+              disabled={isDeleting}
+              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs"
+            >
+              {isDeleting ? "Deleting..." : `Yes, Delete ${selectedIds.length} Items`}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Single Delete Confirmation Dialog */}
+      <Dialog open={!!singleDeleteTarget} onOpenChange={(open) => !open && setSingleDeleteTarget(null)}>
+        <DialogContent className="rounded-3xl max-w-sm text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-red-100 text-red-600 mb-2">
+            <AlertCircle className="h-6 w-6" />
+          </div>
+          <DialogTitle className="text-lg font-bold">Delete Master Item?</DialogTitle>
+          <p className="text-xs text-muted-foreground mt-2">
+            Are you sure you want to delete <strong>{singleDeleteTarget?.name_en}</strong> ({singleDeleteTarget?.name_ta})?
+          </p>
+          <div className="flex gap-2 justify-center mt-5">
+            <Button
+              variant="outline"
+              onClick={() => setSingleDeleteTarget(null)}
+              className="rounded-xl text-xs"
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmSingleDelete}
+              disabled={isDeleting}
+              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs"
+            >
+              {isDeleting ? "Deleting..." : "Yes, Delete Item"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add / Edit Master Item Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="rounded-3xl max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="rounded-3xl max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-serif text-xl">
-              {editingItem ? "Edit Master Item" : "Add New Master Produce Item"}
+              {editingItem ? `Edit ${editingItem.name_en}` : "Add New Produce Item"}
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSave} className="space-y-3 pt-2">
-            {/* Product Image Uploader */}
-            <ImageUploader
-              label="Product Photo"
-              value={imageUrl}
-              onChange={setImageUrl}
-              maxDimension={1024}
-              placeholderText="Upload Product Photo (Max 1024x1024 auto-scaled)"
-            />
-
+          <form onSubmit={handleSave} className="space-y-4 pt-2">
+            {/* Image Uploader */}
             <div>
-              <Label className="text-xs font-semibold">Item Name in English *</Label>
-              <Input
-                value={nameEn}
-                onChange={(e) => setNameEn(e.target.value)}
-                placeholder="e.g. Tomato / Ladies Finger"
-                className="mt-1 rounded-xl text-sm"
-                required
-              />
+              <Label className="text-xs font-semibold">Produce Photo (Auto 1:1 Aspect Square)</Label>
+              <div className="mt-1.5 flex items-center gap-4">
+                <ImageUploader
+                  currentImageUrl={imageUrl}
+                  onImageSelected={(url) => setImageUrl(url)}
+                  aspectRatio={1}
+                  label="Upload Item Photo"
+                  className="w-28 h-28"
+                />
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>• Max 1024 × 1024 resolution.</p>
+                  <p>• Clean transparent or white background recommended.</p>
+                  <p>• Tap Crop icon to position picture.</p>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <Label className="text-xs font-semibold">Item Name in Tamil / தமிழ் பெயர்</Label>
-              <Input
-                value={nameTa}
-                onChange={(e) => setNameTa(e.target.value)}
-                placeholder="e.g. தக்காளி / வெண்டைக்காய்"
-                className="mt-1 rounded-xl text-sm font-tamil"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs font-semibold">Category *</Label>
+                <Label className="text-xs font-semibold">Item Name (English)</Label>
+                <Input
+                  value={nameEn}
+                  onChange={(e) => setNameEn(e.target.value)}
+                  placeholder="e.g. Country Tomato"
+                  className="mt-1 rounded-xl text-sm"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs font-semibold">Tamil Name (தமிழ் பெயர்)</Label>
+                <Input
+                  value={nameTa}
+                  onChange={(e) => setNameTa(e.target.value)}
+                  placeholder="e.g. நாட்டுத் தக்காளி"
+                  className="mt-1 rounded-xl text-sm font-tamil"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs font-semibold">Produce Category</Label>
                 <select
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
                   className="w-full mt-1 rounded-xl border p-2.5 text-sm bg-background"
-                  required
                 >
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name} {c.name_ta ? `(${c.name_ta})` : ""}
+                      {c.name} ({c.name_ta})
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <Label className="text-xs font-semibold">Brand Partner</Label>
+                <Label className="text-xs font-semibold">Brand / Farm Partner</Label>
                 <select
                   value={brandId}
                   onChange={(e) => setBrandId(e.target.value)}
                   className="w-full mt-1 rounded-xl border p-2.5 text-sm bg-background"
                 >
-                  <option value="">— Generic / Direct Farm —</option>
+                  <option value="">Direct Farm (No specific brand)</option>
                   {brands.map((b) => (
                     <option key={b.id} value={b.id}>
-                      {b.name}
+                      {b.name} ({b.name_ta})
                     </option>
                   ))}
                 </select>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            {/* Packaging & Quantities */}
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs font-semibold">Unit of Measure</Label>
+                <Label className="text-xs font-semibold">Base Measuring Unit</Label>
                 <select
                   value={unit}
                   onChange={(e) => {
@@ -791,11 +1287,11 @@ export default function AdminItemsPage() {
                     if (!editingItem) {
                       if (u === "Gram") {
                         setPresetsStr("100, 250, 500");
-                        setMinQty(50);
-                        setMaxQty(2000);
+                        setMinQty(100);
+                        setMaxQty(1000);
                       } else if (u === "Nos") {
-                        setPresetsStr("1, 2, 5, 10");
-                        setMinQty(1);
+                        setPresetsStr("2, 5, 10");
+                        setMinQty(2);
                         setMaxQty(25);
                       } else if (u === "Litre") {
                         setPresetsStr("0.5, 1, 2");
@@ -803,11 +1299,11 @@ export default function AdminItemsPage() {
                         setMaxQty(10);
                       } else if (u === "Ml") {
                         setPresetsStr("250, 500, 1000");
-                        setMinQty(100);
+                        setMinQty(250);
                         setMaxQty(5000);
                       } else {
                         setPresetsStr("0.5, 1, 2");
-                        setMinQty(0.25);
+                        setMinQty(0.5);
                         setMaxQty(10);
                       }
                     }
@@ -823,7 +1319,7 @@ export default function AdminItemsPage() {
               </div>
 
               <div>
-                <Label className="text-xs font-semibold">1-Tap Presets (csv)</Label>
+                <Label className="text-xs font-semibold">Pack Sizes / Presets (csv)</Label>
                 <Input
                   value={presetsStr}
                   onChange={(e) => setPresetsStr(e.target.value)}

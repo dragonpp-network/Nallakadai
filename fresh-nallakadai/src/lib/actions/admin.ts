@@ -728,6 +728,82 @@ export async function saveCustomerAction(
   return { success: true };
 }
 
+export async function deleteCustomerAction(
+  userId: string = DEFAULT_SUPER_ADMIN_ID,
+  customerId: string
+) {
+  await requireAdmin(userId);
+  const store = getLocalStore();
+  const idx = store.customers.findIndex((c) => c.id === customerId);
+  if (idx >= 0) {
+    store.customers.splice(idx, 1);
+    saveLocalStore(store);
+  }
+  return { success: true };
+}
+
+export async function bulkDeleteCustomersAction(
+  userId: string = DEFAULT_SUPER_ADMIN_ID,
+  customerIds: string[]
+) {
+  await requireAdmin(userId);
+  const store = getLocalStore();
+  const idSet = new Set(customerIds);
+  const initialCount = store.customers.length;
+  store.customers = store.customers.filter((c) => !idSet.has(c.id));
+  const deletedCount = initialCount - store.customers.length;
+  saveLocalStore(store);
+  return { success: true, deletedCount };
+}
+
+export async function bulkSaveCustomersAction(
+  userId: string = DEFAULT_SUPER_ADMIN_ID,
+  customerList: any[]
+) {
+  await requireAdmin(userId);
+  const store = getLocalStore();
+  let addedCount = 0;
+  let updatedCount = 0;
+
+  for (const c of customerList) {
+    const mobile = String(c.mobile || "").trim();
+    if (!mobile || mobile.length < 10) continue;
+
+    const cleanMobile = mobile.slice(-10);
+    const existingIdx = store.customers.findIndex((cust) => cust.mobile === cleanMobile);
+
+    if (existingIdx >= 0) {
+      store.customers[existingIdx] = {
+        ...store.customers[existingIdx],
+        name: c.name || store.customers[existingIdx].name,
+        alt_mobile: c.altMobile || store.customers[existingIdx].alt_mobile,
+        branch_id: c.branchId || store.customers[existingIdx].branch_id,
+        delivery_mode: c.deliveryMode || store.customers[existingIdx].delivery_mode,
+        address: c.address !== undefined ? c.address : store.customers[existingIdx].address,
+        area: c.area !== undefined ? c.area : store.customers[existingIdx].area,
+        active: c.active !== undefined ? c.active : store.customers[existingIdx].active,
+      };
+      updatedCount++;
+    } else {
+      store.customers.push({
+        id: `55555555-000${store.customers.length + 1}-4111-8111-111111111111`,
+        name: c.name || "Customer",
+        mobile: cleanMobile,
+        alt_mobile: c.altMobile || null,
+        branch_id: c.branchId || store.branches[0]?.id || "11111111-0001-4111-8111-111111111111",
+        delivery_mode: c.deliveryMode || "Door Delivery",
+        address: c.address || "",
+        area: c.area || "",
+        active: c.active !== false,
+      });
+      addedCount++;
+    }
+  }
+
+  saveLocalStore(store);
+  return { success: true, addedCount, updatedCount };
+}
+
 /**
  * Master Items
  */
@@ -826,6 +902,191 @@ export async function saveMasterItemAction(
 
   saveLocalStore(store);
   return { success: true };
+}
+
+export async function deleteMasterItemAction(
+  userId: string = DEFAULT_SUPER_ADMIN_ID,
+  itemId: string
+) {
+  await requireAdmin(userId);
+  const store = getLocalStore();
+  const idx = store.items.findIndex((i) => i.id === itemId);
+  if (idx >= 0) {
+    store.items.splice(idx, 1);
+    // Remove from cycle_items
+    store.cycle_items = store.cycle_items.filter((ci) => ci.item_id !== itemId);
+    saveLocalStore(store);
+  }
+  return { success: true };
+}
+
+export async function bulkDeleteItemsAction(
+  userId: string = DEFAULT_SUPER_ADMIN_ID,
+  itemIds: string[]
+) {
+  await requireAdmin(userId);
+  const store = getLocalStore();
+  const idSet = new Set(itemIds);
+  const initialCount = store.items.length;
+  store.items = store.items.filter((i) => !idSet.has(i.id));
+  store.cycle_items = store.cycle_items.filter((ci) => !idSet.has(ci.item_id));
+  const deletedCount = initialCount - store.items.length;
+  saveLocalStore(store);
+  return { success: true, deletedCount };
+}
+
+export async function bulkSaveMasterItemsAction(
+  userId: string = DEFAULT_SUPER_ADMIN_ID,
+  rawItems: any[]
+) {
+  await requireAdmin(userId);
+  const store = getLocalStore();
+  let addedCount = 0;
+  let updatedCount = 0;
+
+  for (const raw of rawItems) {
+    const nameEn = String(raw.nameEn || raw.name_en || raw.name || "").trim();
+    if (!nameEn) continue;
+
+    const nameTa = String(raw.nameTa || raw.name_ta || "").trim();
+    const unit = String(raw.unit || "Kg").trim();
+
+    // 1. Resolve Category
+    let categoryId = raw.categoryId || raw.category_id;
+    if (!categoryId && raw.category) {
+      const catName = String(raw.category).trim();
+      let foundCat = store.categories.find(
+        (c) => c.name.toLowerCase() === catName.toLowerCase() || c.name_ta === catName
+      );
+      if (!foundCat) {
+        // Create new category automatically
+        const newCatId = `22222222-00${store.categories.length + 1}-4111-8111-111111111111`;
+        foundCat = {
+          id: newCatId,
+          name: catName,
+          name_ta: raw.categoryTa || raw.category_ta || "",
+          tint: "#EAF3DD",
+          sort_order: store.categories.length + 1,
+          active: true,
+        };
+        store.categories.push(foundCat);
+      }
+      categoryId = foundCat.id;
+    }
+    if (!categoryId) {
+      categoryId = store.categories[0]?.id || "22222222-0001-4111-8111-111111111111";
+    }
+
+    // 2. Resolve Brand
+    let brandId = raw.brandId || raw.brand_id || null;
+    if (!brandId && raw.brand) {
+      const brandName = String(raw.brand).trim();
+      let foundBrand = store.brands.find(
+        (b) => b.name.toLowerCase() === brandName.toLowerCase() || b.name_ta === brandName
+      );
+      if (!foundBrand && brandName.toLowerCase() !== "direct farm" && brandName.toLowerCase() !== "none") {
+        const newBrandId = `b0000000-000${store.brands.length + 1}-4111-8111-111111111111`;
+        foundBrand = {
+          id: newBrandId,
+          name: brandName,
+          name_ta: "",
+          description: "Direct Partner Farm",
+          category_ids: [categoryId],
+          active: true,
+        };
+        store.brands.push(foundBrand);
+      }
+      if (foundBrand) brandId = foundBrand.id;
+    }
+
+    // 3. Resolve Presets (Pack sizes)
+    let presets: number[] = [];
+    if (Array.isArray(raw.presets)) {
+      presets = raw.presets.map((n: any) => Number(n)).filter((n: number) => !isNaN(n) && n > 0);
+    } else if (typeof raw.presets === "string" || typeof raw.packSizes === "string") {
+      const str = String(raw.presets || raw.packSizes || "");
+      presets = str
+        .split(/[,\/|]/)
+        .map((s) => parseFloat(s.trim()))
+        .filter((n) => !isNaN(n) && n > 0);
+    }
+    if (presets.length === 0) {
+      presets = unit.toLowerCase() === "gram" ? [100, 250, 500] : unit.toLowerCase() === "nos" ? [1, 2, 5] : [0.5, 1, 2];
+    }
+
+    // 4. Resolve Min / Max Qty
+    const minQty = Number(raw.minQty || raw.min_qty || presets[0] || 1);
+    const maxQty = Number(raw.maxQty || raw.max_qty || 25);
+
+    // 5. Resolve Pricing
+    const sellingPrice = Number(raw.sellingPrice || raw.selling_price || raw.mrp || raw.price || 50);
+    const procurementCost = Number(raw.procurementCost || raw.procurement_cost || raw.buyingCost || raw.cost || Math.round(sellingPrice * 0.7));
+    const discountPercent = Number(raw.discountPercent || raw.discount_percent || raw.discount || 0);
+    const netPrice = Math.round((sellingPrice - (sellingPrice * discountPercent) / 100) * 100) / 100;
+    const active = raw.active !== undefined ? Boolean(raw.active) : true;
+
+    // Check existing item by ID or Name
+    const existingIdx = store.items.findIndex(
+      (i) => (raw.id && i.id === raw.id) || i.name_en.toLowerCase() === nameEn.toLowerCase()
+    );
+
+    let finalItemId = "";
+
+    if (existingIdx >= 0) {
+      finalItemId = store.items[existingIdx].id;
+      store.items[existingIdx] = {
+        ...store.items[existingIdx],
+        name_en: nameEn,
+        name_ta: nameTa || store.items[existingIdx].name_ta,
+        category_id: categoryId,
+        brand_id: brandId !== undefined ? brandId : store.items[existingIdx].brand_id,
+        image_url: raw.imageUrl || raw.image_url || store.items[existingIdx].image_url || null,
+        unit,
+        presets,
+        min_qty: minQty,
+        max_qty: maxQty,
+        procurement_cost: procurementCost,
+        selling_price: sellingPrice,
+        discount_percent: discountPercent,
+        price: netPrice,
+        active,
+      };
+      updatedCount++;
+    } else {
+      finalItemId = `33333333-00${store.items.length + 1}-4111-8111-111111111111`;
+      store.items.push({
+        id: finalItemId,
+        name_en: nameEn,
+        name_ta: nameTa,
+        category_id: categoryId,
+        brand_id: brandId,
+        image_url: raw.imageUrl || raw.image_url || null,
+        unit,
+        presets,
+        min_qty: minQty,
+        max_qty: maxQty,
+        procurement_cost: procurementCost,
+        selling_price: sellingPrice,
+        discount_percent: discountPercent,
+        price: netPrice,
+        active,
+      });
+      addedCount++;
+    }
+
+    // Synchronize cycle_items pricing
+    for (const ci of store.cycle_items) {
+      if (ci.item_id === finalItemId) {
+        ci.price = netPrice;
+        ci.procurement_cost = procurementCost;
+        ci.selling_price = sellingPrice;
+        ci.discount_percent = discountPercent;
+      }
+    }
+  }
+
+  saveLocalStore(store);
+  return { success: true, addedCount, updatedCount };
 }
 
 /**
@@ -1052,6 +1313,90 @@ export async function deleteCategoryAction(
   return { success: true };
 }
 
+export async function bulkDeleteCategoriesAction(
+  userId: string = DEFAULT_SUPER_ADMIN_ID,
+  categoryIds: string[]
+) {
+  await requireAdmin(userId);
+  const store = getLocalStore();
+  const idSet = new Set(categoryIds);
+
+  const blocked: string[] = [];
+  const allowedToDelete: string[] = [];
+
+  for (const catId of categoryIds) {
+    const linked = store.items.filter((i) => i.category_id === catId);
+    if (linked.length > 0) {
+      const catObj = store.categories.find((c) => c.id === catId);
+      blocked.push(`${catObj?.name || "Category"} (${linked.length} items)`);
+    } else {
+      allowedToDelete.push(catId);
+    }
+  }
+
+  const allowedSet = new Set(allowedToDelete);
+  const initialCount = store.categories.length;
+  store.categories = store.categories.filter((c) => !allowedSet.has(c.id));
+  const deletedCount = initialCount - store.categories.length;
+
+  saveLocalStore(store);
+  return {
+    success: true,
+    deletedCount,
+    blockedCount: blocked.length,
+    blockedNames: blocked,
+  };
+}
+
+export async function bulkSaveCategoriesAction(
+  userId: string = DEFAULT_SUPER_ADMIN_ID,
+  rawCategories: any[]
+) {
+  await requireAdmin(userId);
+  const store = getLocalStore();
+  let addedCount = 0;
+  let updatedCount = 0;
+
+  for (const raw of rawCategories) {
+    const name = String(raw.name || raw.nameEn || raw.name_en || "").trim();
+    if (!name) continue;
+
+    const nameTa = String(raw.nameTa || raw.name_ta || "").trim();
+    const tint = String(raw.tint || "#EAF3DD").trim();
+    const sortOrder = Number(raw.sortOrder || raw.sort_order || store.categories.length + 1);
+    const active = raw.active !== undefined ? Boolean(raw.active) : true;
+
+    const existingIdx = store.categories.findIndex(
+      (c) => (raw.id && c.id === raw.id) || c.name.toLowerCase() === name.toLowerCase()
+    );
+
+    if (existingIdx >= 0) {
+      store.categories[existingIdx] = {
+        ...store.categories[existingIdx],
+        name,
+        name_ta: nameTa || store.categories[existingIdx].name_ta,
+        tint: tint || store.categories[existingIdx].tint,
+        sort_order: sortOrder || store.categories[existingIdx].sort_order,
+        active,
+      };
+      updatedCount++;
+    } else {
+      store.categories.push({
+        id: `22222222-00${store.categories.length + 1}-4111-8111-111111111111`,
+        name,
+        name_ta: nameTa,
+        tint,
+        sort_order: sortOrder,
+        active,
+      });
+      addedCount++;
+    }
+  }
+
+  saveLocalStore(store);
+  return { success: true, addedCount, updatedCount };
+}
+
 /**
  * Brands Management
  */
@@ -1135,6 +1480,88 @@ export async function deleteBrandAction(
   }
 
   return { success: true };
+}
+
+export async function bulkDeleteBrandsAction(
+  userId: string = DEFAULT_SUPER_ADMIN_ID,
+  brandIds: string[]
+) {
+  await requireAdmin(userId);
+  const store = getLocalStore();
+
+  const blocked: string[] = [];
+  const allowedToDelete: string[] = [];
+
+  for (const bId of brandIds) {
+    const linked = store.items.filter((i) => (i as any).brand_id === bId);
+    if (linked.length > 0) {
+      const bObj = store.brands.find((b) => b.id === bId);
+      blocked.push(`${bObj?.name || "Brand"} (${linked.length} items)`);
+    } else {
+      allowedToDelete.push(bId);
+    }
+  }
+
+  const allowedSet = new Set(allowedToDelete);
+  const initialCount = store.brands.length;
+  store.brands = store.brands.filter((b) => !allowedSet.has(b.id));
+  const deletedCount = initialCount - store.brands.length;
+
+  saveLocalStore(store);
+  return {
+    success: true,
+    deletedCount,
+    blockedCount: blocked.length,
+    blockedNames: blocked,
+  };
+}
+
+export async function bulkSaveBrandsAction(
+  userId: string = DEFAULT_SUPER_ADMIN_ID,
+  rawBrands: any[]
+) {
+  await requireAdmin(userId);
+  const store = getLocalStore();
+  let addedCount = 0;
+  let updatedCount = 0;
+
+  for (const raw of rawBrands) {
+    const name = String(raw.name || raw.nameEn || raw.name_en || "").trim();
+    if (!name) continue;
+
+    const nameTa = String(raw.nameTa || raw.name_ta || "").trim();
+    const description = String(raw.description || raw.desc || "").trim();
+    const active = raw.active !== undefined ? Boolean(raw.active) : true;
+
+    const existingIdx = store.brands.findIndex(
+      (b) => (raw.id && b.id === raw.id) || b.name.toLowerCase() === name.toLowerCase()
+    );
+
+    if (existingIdx >= 0) {
+      store.brands[existingIdx] = {
+        ...store.brands[existingIdx],
+        name,
+        name_ta: nameTa || store.brands[existingIdx].name_ta,
+        description: description || store.brands[existingIdx].description,
+        active,
+      };
+      updatedCount++;
+    } else {
+      store.brands.push({
+        id: `b0000000-000${store.brands.length + 1}-4111-8111-111111111111`,
+        name,
+        name_ta: nameTa,
+        logo_url: null,
+        description,
+        category_ids: [],
+        active,
+      });
+      addedCount++;
+    }
+  }
+
+  saveLocalStore(store);
+  return { success: true, addedCount, updatedCount };
 }
 
 /**
