@@ -245,24 +245,33 @@ export default function StorefrontPage() {
    */
   function handleStartEditingOrder(order?: any) {
     const target = order || storeData?.currentOrder || historyOrders.find((o) => o.isCurrentCycle && o.status === "Placed");
-    if (!target) return;
+    if (!target) {
+      toast.error("Could not find order details to edit.");
+      return;
+    }
 
     const lines = target.order_items || target.lines || [];
+    if (!lines || lines.length === 0) {
+      toast.error("This order has no items to edit.");
+      return;
+    }
+
     const existing: Record<string, { packSize: number; packPrice: number; packLabel: string; packCount: number }> = {};
     for (const item of lines) {
       const id = item.item_id || item.itemId || item.id;
+      if (!id) continue;
       const meta = storeData?.items?.find((i: any) => i.itemId === id);
       const packOptions = (meta?.packOptions && meta.packOptions.length > 0)
         ? meta.packOptions
         : (meta?.presets || [1]).map((p: number) => ({
-            label: `${p} ${meta?.unit || "Kg"}`,
+            label: `${p} ${meta?.unit || item.unit || "Kg"}`,
             qty: p,
-            price: (meta?.price || 0) * p,
+            price: (meta?.price || item.price || 0) * p,
           }));
       const packSize = Number(item.pack_size || item.packSize || packOptions[0]?.qty || item.qty || 1);
       const matchingOpt = packOptions.find((o: any) => o.qty === packSize) || packOptions[0];
-      const packPrice = Number(item.pack_price || matchingOpt?.price || (meta?.price || 0) * packSize);
-      const packLabel = item.pack_label || matchingOpt?.label || `${packSize} ${meta?.unit || ""}`;
+      const packPrice = Number(item.pack_price !== undefined && !isNaN(Number(item.pack_price)) ? item.pack_price : (matchingOpt?.price || (meta?.price || item.price || 0) * packSize));
+      const packLabel = item.pack_label || matchingOpt?.label || `${packSize} ${meta?.unit || item.unit || ""}`;
       const totalQ = Number(item.qty || packSize);
       const packCount = Number(item.pack_count || item.packCount || Math.max(1, Math.round(totalQ / packSize)));
       existing[id] = { packSize, packPrice, packLabel, packCount };

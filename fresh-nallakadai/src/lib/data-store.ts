@@ -53,107 +53,136 @@ export interface StoreState {
   audit_logs: any[];
 }
 
-export function calculateDefaultPackPrice(qty: number, basePrice: number, unit: string): number {
-  const u = (unit || "Kg").toLowerCase();
-  if (u === "gram" || u === "gm" || u === "g") {
-    // If unit was gram and price is per kg, 250g of 80/kg is (250/1000)*80 = 20
-    const grams = qty >= 10 ? qty : qty * 1000;
-    return Math.round(((grams / 1000) * basePrice) * 100) / 100;
-  }
-  if (u === "ml") {
-    const ml = qty >= 10 ? qty : qty * 1000;
-    return Math.round(((ml / 1000) * basePrice) * 100) / 100;
-  }
-  return Math.round((qty * basePrice) * 100) / 100;
+export function calculateDefaultPackPrice(qty: number, basePrice: number, unit: string = "Kg"): number {
+  return Math.round(qty * basePrice * 100) / 100;
 }
 
-export function formatPackLabel(qty: number, unit: string, originalStr?: string): string {
-  const u = unit || "Kg";
+export function formatPackLabel(qty: number, unit: string = "Kg", originalStr?: string): string {
+  const u = (unit || "Kg").toLowerCase();
   if (originalStr && originalStr.trim()) {
     const s = originalStr.trim();
     if (s.toLowerCase().includes("pack") || s.toLowerCase().includes("nos") || s.toLowerCase().includes("kg") || s.toLowerCase().includes("gm") || s.toLowerCase().includes("ml") || s.toLowerCase().includes("litre")) {
       return s;
     }
   }
-  if (u === "Kg") {
-    if (qty < 1) return `${Math.round(qty * 1000)} gm`;
+
+  if (u === "kg" || u === "kilogram") {
+    if (qty < 1) {
+      const g = Math.round(qty * 1000);
+      return `${g} gm`;
+    }
     return `${qty} Kg`;
   }
-  if (u === "Litre" || u === "L") {
-    if (qty < 1) return `${Math.round(qty * 1000)} ml`;
+  if (u === "litre" || u === "l") {
+    if (qty < 1) {
+      const ml = Math.round(qty * 1000);
+      return `${ml} ml`;
+    }
     return `${qty} Litre`;
   }
-  if (u === "Gram") {
-    if (qty >= 1000) return `${qty / 1000} Kg`;
-    return `${qty} gm`;
-  }
-  if (u === "Nos") {
+  if (u === "nos") {
     return `${qty} Nos`;
   }
-  return `${qty} ${u}`;
+  return `${qty} ${unit}`;
 }
 
-export function parseQuantityFromString(str: string, baseUnit: string): number {
+export function parseQuantityFromString(str: string, baseUnit: string = "Kg"): number {
   const s = str.trim().toLowerCase();
-  if (s.endsWith("gm") || s.endsWith("gram") || s.endsWith("g")) {
+  const bu = (baseUnit || "Kg").toLowerCase();
+
+  // Explicit Grams input (e.g. "100 gm", "250g", "500 grams")
+  if (s.endsWith("gm") || s.endsWith("gram") || s.endsWith("grams") || s.endsWith("g") || s.includes("gm") || s.includes("gram")) {
     const num = parseFloat(s.replace(/[^0-9.]/g, ""));
     if (isNaN(num)) return 0;
-    const bu = (baseUnit || "Kg").toLowerCase();
-    if (bu === "kg") return num >= 10 ? num / 1000 : num;
+    if (bu === "kg" || bu === "kilogram") {
+      return num >= 10 ? num / 1000 : num;
+    }
     return num;
   }
-  if (s.endsWith("ml")) {
+
+  // Explicit Millilitres input (e.g. "250 ml", "500ml")
+  if (s.endsWith("ml") || s.includes("ml")) {
     const num = parseFloat(s.replace(/[^0-9.]/g, ""));
     if (isNaN(num)) return 0;
-    const bu = (baseUnit || "Litre").toLowerCase();
-    if (bu === "litre" || bu === "l") return num >= 10 ? num / 1000 : num;
+    if (bu === "litre" || bu === "l") {
+      return num >= 10 ? num / 1000 : num;
+    }
     return num;
   }
-  if (s.endsWith("kg")) {
+
+  // Explicit Kilograms input (e.g. "1 kg", "2.5kg")
+  if (s.endsWith("kg") || s.includes("kg")) {
     const num = parseFloat(s.replace(/[^0-9.]/g, ""));
     return isNaN(num) ? 0 : num;
   }
-  const num = parseFloat(s.replace(/[^0-9.]/g, ""));
-  return isNaN(num) ? 0 : num;
+
+  // Explicit Litres input (e.g. "1 litre", "0.5l")
+  if (s.endsWith("litre") || s.endsWith("l") || s.includes("litre")) {
+    const num = parseFloat(s.replace(/[^0-9.]/g, ""));
+    return isNaN(num) ? 0 : num;
+  }
+
+  // Explicit Count / Nos input (e.g. "2 nos", "5 pcs")
+  if (s.includes("nos") || s.includes("no") || s.includes("pc") || s.includes("pack")) {
+    const num = parseFloat(s.replace(/[^0-9.]/g, ""));
+    return isNaN(num) ? 0 : num;
+  }
+
+  // Raw numerical input (e.g. "100", "250", "0.5", "1")
+  const rawNum = parseFloat(s.replace(/[^0-9.]/g, ""));
+  if (isNaN(rawNum)) return 0;
+
+  // Auto-detect: If baseUnit is Kg and input is a large number (e.g. 50, 100, 250, 500), treat as Grams
+  if ((bu === "kg" || bu === "kilogram") && rawNum >= 50) {
+    return rawNum / 1000;
+  }
+  // Auto-detect: If baseUnit is Litre and input is a large number (e.g. 100, 250, 500), treat as ml
+  if ((bu === "litre" || bu === "l") && rawNum >= 50) {
+    return rawNum / 1000;
+  }
+
+  return rawNum;
 }
 
 export function parsePackOptionsInput(
   rawInput: any,
   basePrice: number,
-  unit: string
+  unit: string = "Kg"
 ): PackOption[] {
   if (!rawInput) return [];
 
   // Array of objects
   if (Array.isArray(rawInput) && rawInput.length > 0 && typeof rawInput[0] === "object") {
     return rawInput.map((opt) => {
-      const qty = Number(opt.qty || 1);
-      const standardPrice = calculateDefaultPackPrice(qty, basePrice, unit);
+      const rawQty = Number(opt.qty || 1);
+      const cleanQty = (unit.toLowerCase() === "kg" && rawQty >= 50) ? rawQty / 1000 : rawQty;
+      const standardPrice = calculateDefaultPackPrice(cleanQty, basePrice, unit);
       const price = opt.price !== undefined && Number(opt.price) > 0 ? Number(opt.price) : standardPrice;
       const savings = standardPrice > price ? standardPrice - price : 0;
       const savingsText = savings > 0 ? `Save ₹${Math.round(savings * 100) / 100}` : (opt.savingsText || null);
       return {
-        label: opt.label || formatPackLabel(qty, unit),
-        qty,
+        label: opt.label || formatPackLabel(cleanQty, unit),
+        qty: cleanQty,
         price,
         savingsText,
       };
     });
   }
 
-  // Array of numbers, e.g. [0.5, 1, 2]
+  // Array of numbers, e.g. [0.5, 1, 2] or [100, 250, 500]
   if (Array.isArray(rawInput) && rawInput.length > 0 && typeof rawInput[0] === "number") {
-    return rawInput.map((qty) => {
-      const price = calculateDefaultPackPrice(qty, basePrice, unit);
+    return rawInput.map((rawQty) => {
+      const cleanQty = (unit.toLowerCase() === "kg" && rawQty >= 50) ? rawQty / 1000 : rawQty;
+      const price = calculateDefaultPackPrice(cleanQty, basePrice, unit);
       return {
-        label: formatPackLabel(qty, unit),
-        qty,
+        label: formatPackLabel(cleanQty, unit),
+        qty: cleanQty,
         price,
       };
     });
   }
 
-  // String format e.g. "2 nos:25 | 5 nos:55 | 10 nos:100" OR "0.25, 0.5, 1"
+  // String format e.g. "2 nos:25 | 5 nos:55 | 10 nos:100" OR "100 gm, 250 gm, 500 gm, 1Kg"
   const str = String(rawInput).trim();
   if (!str) return [];
 
@@ -259,39 +288,87 @@ function getDefaultState(): StoreState {
 }
 
 /**
+ * Check if a directory is a mounted block storage volume via /proc/mounts
+ */
+export function isMountPoint(targetPath: string): boolean {
+  try {
+    if (!fs.existsSync(targetPath)) return false;
+    if (fs.existsSync("/proc/mounts")) {
+      const mounts = fs.readFileSync("/proc/mounts", "utf8");
+      const resolved = fs.realpathSync(targetPath);
+      const isMounted = mounts.split("\n").some((line) => {
+        const parts = line.trim().split(/\s+/);
+        return parts[1] === targetPath || parts[1] === resolved;
+      });
+      if (isMounted) return true;
+    }
+    // Fallback: Check device ID difference with parent directory
+    const statTarget = fs.statSync(targetPath);
+    const statParent = fs.statSync(path.dirname(path.resolve(targetPath)));
+    return statTarget.dev !== statParent.dev;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * List all candidate storage directories in priority order
+ */
+export function getCandidateDirectories(): string[] {
+  const dirs: string[] = [];
+
+  // 1. Explicit environment variable if configured
+  if (process.env.DATA_DIR && process.env.DATA_DIR.trim() !== "") {
+    dirs.push(path.resolve(process.env.DATA_DIR.trim()));
+  }
+
+  // 2. Standard Railway volume mount paths
+  dirs.push("/data");
+  dirs.push("/app/data");
+
+  // 3. Local application relative directory
+  dirs.push(path.join(process.cwd(), "data"));
+
+  // 4. Ephemeral fallback
+  dirs.push("/tmp/nk-data");
+
+  return [...new Set(dirs)];
+}
+
+/**
  * Multi-Tier Storage Directory Discovery
- * Prioritizes persistent volume locations across Railway, Docker, and local development.
+ * Prioritizes persistent mounted volume locations across Railway and Docker.
  */
 export function getStorageDirectory(): string {
   if (globalThis.__nk_active_dir) {
     return globalThis.__nk_active_dir;
   }
 
-  const candidateDirs: string[] = [];
+  const candidateDirs = getCandidateDirectories();
 
-  // 1. Explicit environment variable if configured
-  if (process.env.DATA_DIR && process.env.DATA_DIR.trim() !== "") {
-    candidateDirs.push(process.env.DATA_DIR.trim());
+  // 1. First check if any candidate is an active mounted persistent volume
+  for (const dir of candidateDirs) {
+    if (isMountPoint(dir)) {
+      try {
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        const testFile = path.join(dir, `.nk_test_${Date.now()}`);
+        fs.writeFileSync(testFile, "test", "utf8");
+        fs.unlinkSync(testFile);
+        globalThis.__nk_active_dir = dir;
+        console.log(`[Storage] Selected mounted persistent volume directory: ${dir}`);
+        return dir;
+      } catch (err) {
+        console.warn(`[Storage] Mounted volume ${dir} write test failed:`, err);
+      }
+    }
   }
 
-  // 2. Standard Railway volume mount path (/app/data)
-  candidateDirs.push("/app/data");
-
-  // 3. Alternative standard volume mount path (/data)
-  candidateDirs.push("/data");
-
-  // 4. Local application relative directory (process.cwd()/data)
-  candidateDirs.push(path.join(process.cwd(), "data"));
-
-  // 5. Ephemeral fallback
-  candidateDirs.push("/tmp/nk-data");
-
+  // 2. Otherwise pick first writable directory
   for (const dir of candidateDirs) {
     try {
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
-      // Test write permissions
       const testFile = path.join(dir, `.nk_test_${Date.now()}`);
       fs.writeFileSync(testFile, "test", "utf8");
       fs.unlinkSync(testFile);
@@ -338,6 +415,56 @@ export function getUploadsDirectory(): string {
     }
   } catch {}
   return uploadsDir;
+}
+
+/**
+ * 2-Phase Safe Database & Backup Discovery
+ * Searches all candidate paths to guarantee zero data loss across deployments.
+ */
+export function discoverDatabaseFile(): { filePath: string; isBackup: boolean } | null {
+  const candidates = getCandidateDirectories();
+
+  // 1. Search for existing valid store.json
+  for (const dir of candidates) {
+    const p = path.join(dir, "store.json");
+    if (fs.existsSync(p)) {
+      try {
+        const content = fs.readFileSync(p, "utf8");
+        const parsed = JSON.parse(content);
+        if (parsed && (Array.isArray(parsed.items) || Array.isArray(parsed.customers) || Array.isArray(parsed.orders))) {
+          console.log(`[Storage Discovery] Found valid existing database at ${p}`);
+          return { filePath: p, isBackup: false };
+        }
+      } catch (e) {
+        console.warn(`[Storage Discovery] Found corrupt store.json at ${p}:`, e);
+      }
+    }
+  }
+
+  // 2. Search for newest backup snapshot across all candidate backup directories
+  let newestBackup: { path: string; mtime: number } | null = null;
+  for (const dir of candidates) {
+    const backupDir = path.join(dir, "backups");
+    if (fs.existsSync(backupDir)) {
+      try {
+        const files = fs.readdirSync(backupDir).filter((f) => f.endsWith(".json"));
+        for (const f of files) {
+          const bp = path.join(backupDir, f);
+          const mtime = fs.statSync(bp).mtime.getTime();
+          if (!newestBackup || mtime > newestBackup.mtime) {
+            newestBackup = { path: bp, mtime };
+          }
+        }
+      } catch {}
+    }
+  }
+
+  if (newestBackup) {
+    console.log(`[Storage Discovery] Auto-recovering from newest backup snapshot: ${newestBackup.path}`);
+    return { filePath: newestBackup.path, isBackup: true };
+  }
+
+  return null;
 }
 
 /**
@@ -394,7 +521,6 @@ export function saveBase64ImageToUploads(dataUrl: string, prefix: string = "img"
 function migrateBase64ImagesToUploads(store: StoreState): boolean {
   let hasBase64 = false;
 
-  // Check if any entity contains base64 image
   const checkBase64 = (url?: string | null) => url && typeof url === "string" && url.startsWith("data:image/");
 
   if (store.items?.some((i) => checkBase64(i.imageUrl))) hasBase64 = true;
@@ -405,7 +531,6 @@ function migrateBase64ImagesToUploads(store: StoreState): boolean {
 
   console.log("[Storage Migration] Base64 images detected. Creating mandatory pre-upgrade safety snapshot...");
 
-  // Mandatory safety snapshot before extracting Base64 images
   try {
     const bDir = getBackupDirectory();
     const safetyFile = path.join(bDir, `pre_upgrade_snapshot_${Date.now()}.json`);
@@ -457,7 +582,6 @@ function migrateBase64ImagesToUploads(store: StoreState): boolean {
 
 /**
  * Startup Deduplication Sanitizer
- * Scans arrays to guarantee no duplicate IDs exist in the database.
  */
 function sanitizeDuplicateIds(store: StoreState): boolean {
   let changed = false;
@@ -488,6 +612,39 @@ function sanitizeDuplicateIds(store: StoreState): boolean {
   return changed;
 }
 
+/**
+ * Legacy Order Line Normalizer & Healer
+ * Automatically corrects orders stored with large gram integers into fractional Kg.
+ */
+function healLegacyOrders(store: StoreState): boolean {
+  let changed = false;
+  if (!Array.isArray(store.orders)) return false;
+
+  for (const order of store.orders) {
+    if (!Array.isArray(order.lines)) continue;
+    for (const line of order.lines as any[]) {
+      const item = store.items?.find((i) => i.id === line.item_id);
+      const isKg = (item?.unit || line.unit || "Kg").toLowerCase() === "kg";
+
+      // If quantity was stored as >= 50 on a Kg item (e.g. 400 for 400gm), auto-correct to 0.4 Kg
+      if (isKg && Number(line.qty) >= 50) {
+        const rawGrams = Number(line.qty);
+        const correctedKg = rawGrams / 1000;
+        line.qty = correctedKg;
+        if (!line.pack_size || Number(line.pack_size) >= 50) {
+          line.pack_size = line.pack_count ? correctedKg / Number(line.pack_count) : correctedKg;
+        }
+        const effectivePrice = item ? item.price : Number(line.price || 0);
+        line.line_total = Math.round(correctedKg * effectivePrice * 100) / 100;
+        line.pack_label = `${rawGrams} gm`;
+        changed = true;
+      }
+    }
+  }
+
+  return changed;
+}
+
 export function getLocalStore(): StoreState {
   if (globalThis.__nk_store) {
     return globalThis.__nk_store;
@@ -495,7 +652,27 @@ export function getLocalStore(): StoreState {
 
   try {
     const targetFile = getStorageFilePath();
-    if (!fs.existsSync(targetFile)) {
+    let content: string | null = null;
+
+    if (fs.existsSync(targetFile)) {
+      content = fs.readFileSync(targetFile, "utf8");
+    } else {
+      // 2-Phase Safe Discovery across candidate paths and backups
+      const discovered = discoverDatabaseFile();
+      if (discovered) {
+        content = fs.readFileSync(/*turbopackIgnore: true*/ discovered.filePath, "utf8");
+        // Migrate to primary active persistent storage file
+        try {
+          fs.writeFileSync(targetFile, content, "utf8");
+          console.log(`[Storage Discovery] Successfully restored database into ${targetFile}`);
+        } catch (copyErr) {
+          console.warn("[Storage Discovery] Could not copy discovered database to primary path:", copyErr);
+        }
+      }
+    }
+
+    if (!content) {
+      console.log("[Storage] No existing database or backup found. Initializing clean default state.");
       const initial = getDefaultState();
       try {
         saveLocalStore(initial, true);
@@ -506,7 +683,6 @@ export function getLocalStore(): StoreState {
       return initial;
     }
 
-    const content = fs.readFileSync(targetFile, "utf8");
     const parsed: StoreState = JSON.parse(content);
 
     if (!parsed.branches) parsed.branches = [...INITIAL_BRANCHES];
@@ -545,12 +721,26 @@ export function getLocalStore(): StoreState {
     // Sanitize any duplicate IDs automatically
     const idsFixed = sanitizeDuplicateIds(parsed);
 
+    // Auto-heal legacy order lines
+    const ordersHealed = healLegacyOrders(parsed);
+
     // Auto-migrate any base64 images into physical binary files in uploads/
     const imagesMigrated = migrateBase64ImagesToUploads(parsed);
 
-    if (idsFixed || imagesMigrated) {
+    if (idsFixed || ordersHealed || imagesMigrated) {
       console.log("[Storage] Automatically repaired and saved clean store.json");
       saveLocalStore(parsed, true);
+    }
+
+    // Create mandatory boot snapshot on every container start
+    try {
+      const bDir = getBackupDirectory();
+      const bootSnapshotPath = path.join(bDir, `boot_snapshot_${Date.now()}.json`);
+      fs.writeFileSync(bootSnapshotPath, JSON.stringify(parsed, null, 2), "utf8");
+      cleanOldBackups(bDir, 5);
+      console.log(`[Storage] Mandatory boot snapshot created at ${bootSnapshotPath}`);
+    } catch (bootErr) {
+      console.warn("[Storage] Could not write boot snapshot:", bootErr);
     }
 
     globalThis.__nk_store = parsed;
@@ -564,21 +754,28 @@ export function getLocalStore(): StoreState {
 }
 
 /**
- * Save StoreState atomically to disk with daily snapshots
+ * Save StoreState atomically to disk with fsync & daily snapshots
  */
 export function saveLocalStore(store: StoreState, skipSnapshot: boolean = false) {
   globalThis.__nk_store = store;
   try {
     const targetFile = getStorageFilePath();
-    const tempFile = `${targetFile}.tmp.${Date.now()}`;
+    const tempFile = `${targetFile}.tmp.${process.pid}.${Date.now()}`;
 
     // 1. Atomic write to temporary file
     fs.writeFileSync(tempFile, JSON.stringify(store, null, 2), "utf8");
 
-    // 2. Atomic rename to target file (guarantees zero partial file corruption)
+    // 2. Fsync to flush buffer directly to persistent block storage disk
+    try {
+      const fd = fs.openSync(tempFile, "r+");
+      fs.fsyncSync(fd);
+      fs.closeSync(fd);
+    } catch {}
+
+    // 3. Atomic rename to target file (guarantees zero partial file corruption)
     fs.renameSync(tempFile, targetFile);
 
-    // 3. Auto-save daily snapshot in backups folder
+    // 4. Auto-save daily snapshot in backups folder
     if (!skipSnapshot) {
       try {
         const bDir = getBackupDirectory();
@@ -617,6 +814,67 @@ function cleanOldBackups(dir: string, maxKeep: number = 5) {
   } catch (e) {
     console.warn("Could not clean old backups:", e);
   }
+}
+
+/**
+ * Storage Diagnostics Info for /admin/backup
+ */
+export function getStorageDiagnosticsInfo(): {
+  activeDirectory: string;
+  isMountedVolume: boolean;
+  storeFileExists: boolean;
+  storeFileSizeKB: number;
+  customerCount: number;
+  itemCount: number;
+  orderCount: number;
+  cycleCount: number;
+  backupCount: number;
+  uploadImageCount: number;
+  candidatePaths: string[];
+} {
+  const dir = getStorageDirectory();
+  const filePath = getStorageFilePath();
+  const bDir = getBackupDirectory();
+  const uDir = getUploadsDirectory();
+
+  let storeFileExists = false;
+  let storeFileSizeKB = 0;
+  if (fs.existsSync(filePath)) {
+    storeFileExists = true;
+    try {
+      storeFileSizeKB = Math.round((fs.statSync(filePath).size / 1024) * 100) / 100;
+    } catch {}
+  }
+
+  let backupCount = 0;
+  if (fs.existsSync(bDir)) {
+    try {
+      backupCount = fs.readdirSync(bDir).filter((f) => f.endsWith(".json")).length;
+    } catch {}
+  }
+
+  let uploadImageCount = 0;
+  if (fs.existsSync(uDir)) {
+    try {
+      uploadImageCount = fs.readdirSync(uDir).length;
+    } catch {}
+  }
+
+  const store = getLocalStore();
+
+  return {
+    activeDirectory: dir,
+    isMountedVolume: isMountPoint(dir),
+    storeFileExists,
+    storeFileSizeKB,
+    customerCount: store.customers?.length || 0,
+    itemCount: store.items?.length || 0,
+    orderCount: store.orders?.length || 0,
+    cycleCount: store.cycles?.length || 0,
+    backupCount,
+    uploadImageCount,
+    candidatePaths: getCandidateDirectories(),
+  };
 }
 
 /**
@@ -762,11 +1020,13 @@ export function getStorageDiagnostics() {
   const activeDir = getStorageDirectory();
   const activeFile = getStorageFilePath();
   const uploadsDir = getUploadsDirectory();
+  const backupDir = getBackupDirectory();
   let fileSize = 0;
   let lastModified = "";
-  let isVolume = activeDir.startsWith("/app/data") || activeDir.startsWith("/data");
+  let isVolume = isMountPoint(activeDir) || activeDir.startsWith("/app/data") || activeDir.startsWith("/data");
   let uploadFilesCount = 0;
   let uploadFilesTotalSizeBytes = 0;
+  let backupFilesCount = 0;
 
   try {
     if (fs.existsSync(activeFile)) {
@@ -789,6 +1049,14 @@ export function getStorageDiagnostics() {
     }
   } catch {}
 
+  try {
+    if (fs.existsSync(backupDir)) {
+      backupFilesCount = fs.readdirSync(backupDir).filter((f) => f.endsWith(".json")).length;
+    }
+  } catch {}
+
+  const store = getLocalStore();
+
   return {
     activeDir,
     activeFile,
@@ -796,8 +1064,14 @@ export function getStorageDiagnostics() {
     fileSizeFormatted: `${(fileSize / 1024).toFixed(1)} KB`,
     lastModified,
     isVolume,
+    isMountedVolume: isMountPoint(activeDir),
     uploadsDir,
     uploadFilesCount,
     uploadFilesTotalSizeFormatted: `${(uploadFilesTotalSizeBytes / (1024 * 1024)).toFixed(2)} MB`,
+    backupFilesCount,
+    customerCount: store.customers?.length || 0,
+    itemCount: store.items?.length || 0,
+    orderCount: store.orders?.length || 0,
+    cycleCount: store.cycles?.length || 0,
   };
 }
