@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Edit, Building2, Phone, MessageSquare, MapPin, ExternalLink } from "lucide-react";
+import { Plus, Edit, Building2, Phone, MessageSquare, MapPin, ExternalLink, Hash } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AdminBranchesPage() {
@@ -24,6 +24,9 @@ export default function AdminBranchesPage() {
 
   // Form State
   const [name, setName] = useState("");
+  const [code, setCode] = useState("ERD");
+  const [orderPrefix, setOrderPrefix] = useState("ERD");
+  const [nextOrderNumber, setNextOrderNumber] = useState<number>(1001);
   const [address, setAddress] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [supportNumber, setSupportNumber] = useState("");
@@ -53,6 +56,9 @@ export default function AdminBranchesPage() {
   function openCreateModal() {
     setEditingBranch(null);
     setName("");
+    setCode("ERD");
+    setOrderPrefix("ERD");
+    setNextOrderNumber(1001);
     setAddress("");
     setWhatsappNumber("919489581122");
     setSupportNumber("919489581122");
@@ -68,6 +74,9 @@ export default function AdminBranchesPage() {
   function openEditModal(b: any) {
     setEditingBranch(b);
     setName(b.name);
+    setCode(b.code || b.name?.slice(0, 3)?.toUpperCase() || "ERD");
+    setOrderPrefix(b.order_prefix || b.code || b.name?.slice(0, 3)?.toUpperCase() || "ERD");
+    setNextOrderNumber(Number(b.next_order_number || 1001));
     setAddress(b.address || "");
     setWhatsappNumber(b.whatsapp_number || "");
     setSupportNumber(b.support_number || "");
@@ -86,6 +95,9 @@ export default function AdminBranchesPage() {
       await saveBranchAction("demo-admin", {
         id: editingBranch?.id,
         name,
+        code,
+        orderPrefix,
+        nextOrderNumber,
         address,
         whatsappNumber,
         supportNumber,
@@ -141,6 +153,13 @@ export default function AdminBranchesPage() {
 
               <div className="rounded-xl bg-muted/50 p-3 text-xs space-y-1.5">
                 <div className="flex items-center gap-2">
+                  <Hash className="h-3.5 w-3.5 text-primary" />
+                  <span>
+                    Order Series: <strong>{(b.order_prefix || b.code || "ERD").toUpperCase()}-XXXX</strong>{" "}
+                    <span className="text-muted-foreground font-mono">(Next: #{(b.order_prefix || b.code || "ERD").toUpperCase()}-{b.next_order_number || 1001})</span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
                   <MessageSquare className="h-3.5 w-3.5 text-emerald-600" />
                   <span>WhatsApp: <strong>+{b.whatsapp_number}</strong></span>
                 </div>
@@ -189,11 +208,61 @@ export default function AdminBranchesPage() {
               <Label className="text-xs">Branch Name</Label>
               <Input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (!editingBranch && (!orderPrefix || orderPrefix === "ERD")) {
+                    const autoCode = (e.target.value.slice(0, 3) || "ERD").toUpperCase();
+                    setCode(autoCode);
+                    setOrderPrefix(autoCode);
+                  }
+                }}
                 placeholder="e.g. Erode / Coimbatore / Tiruppur"
                 className="mt-1 rounded-xl text-sm"
                 required
               />
+            </div>
+
+            {/* Order Sequence Configuration */}
+            <div className="p-3 bg-muted/40 rounded-2xl border space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <Hash className="h-3.5 w-3.5 text-primary" /> Order Series Configuration
+                </Label>
+                <Badge variant="outline" className="text-[10px] font-mono bg-white text-primary font-bold">
+                  Preview: {(orderPrefix || code || "ERD").toUpperCase().trim()}-{nextOrderNumber || 1001}
+                </Badge>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs font-semibold">Order Prefix / Code</Label>
+                  <Input
+                    value={orderPrefix}
+                    onChange={(e) => {
+                      const val = e.target.value.toUpperCase();
+                      setOrderPrefix(val);
+                      setCode(val);
+                    }}
+                    placeholder="e.g. ERD, CBE, TPR"
+                    className="mt-1 rounded-xl text-sm font-mono uppercase"
+                    required
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Short code for order ID prefix</p>
+                </div>
+
+                <div>
+                  <Label className="text-xs font-semibold">Next Sequence Number</Label>
+                  <Input
+                    type="number"
+                    value={nextOrderNumber}
+                    onChange={(e) => setNextOrderNumber(Math.max(1, parseInt(e.target.value) || 1001))}
+                    placeholder="1001"
+                    className="mt-1 rounded-xl text-sm font-mono"
+                    required
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Auto-increments with each order</p>
+                </div>
+              </div>
             </div>
 
             <div>

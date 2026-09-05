@@ -279,6 +279,14 @@ export async function validateCouponAction(code: string, cartTotal: number) {
   };
 }
 
+function getNextBranchOrderNumber(branch: any): string {
+  const prefix = (branch.order_prefix || branch.code || branch.name?.slice(0, 3) || "ERD").toUpperCase().trim();
+  const nextNum = Number(branch.next_order_number !== undefined && !isNaN(Number(branch.next_order_number)) ? branch.next_order_number : 1001);
+  const generatedNo = `${prefix}-${nextNum}`;
+  branch.next_order_number = nextNum + 1;
+  return generatedNo;
+}
+
 /**
  * Submit / Update Order for Customer
  */
@@ -347,7 +355,7 @@ export async function submitCustomerOrderAction(data: {
       };
     });
 
-  let orderNo = `ORD-${Date.now().toString().slice(-4)}`;
+  let orderNo = "";
   let isAppended = false;
 
   if (existingIdx >= 0) {
@@ -391,6 +399,7 @@ export async function submitCustomerOrderAction(data: {
     existingOrder.updated_at = new Date().toISOString();
   } else {
     // 3. New Initial Order for this open cycle
+    orderNo = getNextBranchOrderNumber(branch);
     const orderRecord = {
       id: `ord-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       order_no: orderNo,
