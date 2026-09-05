@@ -5,25 +5,43 @@ import { resizeImageToMaxDimension } from "@/lib/image-utils";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 
-interface ImageUploaderProps {
-  label: string;
+export interface ImageUploaderProps {
+  label?: string;
   value?: string | null;
-  onChange: (dataUrl: string | null) => void;
+  currentImageUrl?: string | null;
+  onChange?: (dataUrl: string | null) => void;
+  onImageSelected?: (dataUrl: string | null) => void;
   maxDimension?: number;
-  aspectRatio?: "square" | "wide";
+  aspectRatio?: "square" | "wide" | number;
   placeholderText?: string;
+  className?: string;
 }
 
 export function ImageUploader({
-  label,
+  label = "Upload Image",
   value,
+  currentImageUrl,
   onChange,
+  onImageSelected,
   maxDimension = 1024,
   aspectRatio = "square",
   placeholderText = "Upload image (Max 1024x1024)",
+  className,
 }: ImageUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [processing, setProcessing] = useState(false);
+
+  // Support both 'value' and 'currentImageUrl'
+  const activeImage = value !== undefined ? value : currentImageUrl;
+
+  function notifyChange(newUrl: string | null) {
+    if (typeof onChange === "function") {
+      onChange(newUrl);
+    }
+    if (typeof onImageSelected === "function") {
+      onImageSelected(newUrl);
+    }
+  }
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -32,8 +50,8 @@ export function ImageUploader({
     setProcessing(true);
     try {
       const resized = await resizeImageToMaxDimension(file, maxDimension);
-      onChange(resized);
-      toast.success("Image processed and scaled to max 1024x1024!");
+      notifyChange(resized);
+      toast.success("Image uploaded & scaled to max 1024x1024!");
     } catch (err: any) {
       toast.error(err.message || "Failed to process image");
     } finally {
@@ -44,34 +62,37 @@ export function ImageUploader({
 
   function handleRemove(e: React.MouseEvent) {
     e.stopPropagation();
-    onChange(null);
+    notifyChange(null);
   }
+
+  const heightClass =
+    aspectRatio === "wide" ? "h-36 w-full" : className ? className : "h-28 w-28";
 
   return (
     <div className="space-y-1.5">
-      <label className="text-xs font-semibold text-foreground flex items-center justify-between">
-        <span>{label}</span>
-        <span className="text-[10px] text-muted-foreground font-normal">Max 1024×1024</span>
-      </label>
+      {label && (
+        <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+          <span>{label}</span>
+          <span className="text-[10px] text-muted-foreground font-normal">Max 1024×1024</span>
+        </label>
+      )}
 
       <div
         onClick={() => fileInputRef.current?.click()}
-        className={`relative cursor-pointer rounded-2xl border-2 border-dashed border-border hover:border-primary/50 transition bg-muted/30 overflow-hidden flex flex-col items-center justify-center p-3 group ${
-          aspectRatio === "wide" ? "h-36" : "h-28"
-        }`}
+        className={`relative cursor-pointer rounded-2xl border-2 border-dashed border-border hover:border-primary/50 transition bg-muted/30 overflow-hidden flex flex-col items-center justify-center p-2 group select-none ${heightClass}`}
       >
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept="image/jpeg,image/png,image/webp,image/jpg"
           onChange={handleFileSelect}
           className="hidden"
         />
 
-        {value ? (
+        {activeImage ? (
           <div className="relative w-full h-full flex items-center justify-center">
             <img
-              src={value}
+              src={activeImage}
               alt="Preview"
               className="max-h-full max-w-full object-contain rounded-xl shadow-sm"
               onError={(e) => {
@@ -88,7 +109,7 @@ export function ImageUploader({
             </button>
           </div>
         ) : (
-          <div className="text-center space-y-1">
+          <div className="text-center space-y-1 p-1">
             <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
               {processing ? (
                 <div className="h-4 w-4 border-2 border-primary border-t-transparent animate-spin rounded-full" />
@@ -96,8 +117,8 @@ export function ImageUploader({
                 <Upload className="h-4 w-4" />
               )}
             </div>
-            <p className="text-xs text-muted-foreground font-medium">
-              {processing ? "Optimizing image..." : placeholderText}
+            <p className="text-[11px] text-muted-foreground font-medium leading-tight">
+              {processing ? "Optimizing..." : placeholderText}
             </p>
           </div>
         )}
