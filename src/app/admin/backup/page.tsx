@@ -4,7 +4,9 @@ import React, { useEffect, useState } from "react";
 import {
   getDatabaseOverviewAction,
   exportDatabaseJsonAction,
+  exportDatabaseZipAction,
   restoreDatabaseAction,
+  restoreDatabaseZipAction,
   restoreSnapshotByNameAction,
 } from "@/lib/actions/admin";
 import { Card } from "@/components/ui/card";
@@ -26,10 +28,11 @@ import {
   Users,
   ShoppingBag,
   Calendar,
-  AlertTriangle,
-  History,
   Clock,
   ShieldCheck,
+  FileArchive,
+  History,
+  Image as ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -38,10 +41,12 @@ export default function AdminBackupPage() {
   const [overview, setOverview] = useState<any>(null);
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
   const [selectedFileContent, setSelectedFileContent] = useState<string | null>(null);
+  const [selectedFileIsZip, setSelectedFileIsZip] = useState(false);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [previewStats, setPreviewStats] = useState<any>(null);
   const [restoring, setRestoring] = useState(false);
-  const [downloading, setDownloading] = useState(false);
+  const [downloadingJson, setDownloadingJson] = useState(false);
+  const [downloadingZip, setDownloadingZip] = useState(false);
 
   useEffect(() => {
     loadOverview();
@@ -59,8 +64,8 @@ export default function AdminBackupPage() {
     }
   }
 
-  async function handleDownloadBackup() {
-    setDownloading(true);
+  async function handleDownloadJsonBackup() {
+    setDownloadingJson(true);
     try {
       const jsonStr = await exportDatabaseJsonAction();
       const blob = new Blob([jsonStr], { type: "application/json" });
@@ -68,16 +73,43 @@ export default function AdminBackupPage() {
       const a = document.createElement("a");
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
       a.href = url;
-      a.download = `nallakadai_store_backup_${timestamp}.json`;
+      a.download = `nallakadai_store_${timestamp}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success("Database backup downloaded successfully!");
+      toast.success("Database JSON downloaded successfully!");
     } catch (err: any) {
-      toast.error("Failed to download database backup");
+      toast.error("Failed to download database JSON");
     } finally {
-      setDownloading(false);
+      setDownloadingJson(false);
+    }
+  }
+
+  async function handleDownloadZipBackup() {
+    setDownloadingZip(true);
+    try {
+      const zipBase64 = await exportDatabaseZipAction();
+      const binaryString = window.atob(zipBase64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes.buffer], { type: "application/zip" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+      a.href = url;
+      a.download = `nallakadai_full_archive_${timestamp}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Complete Store Archive (.ZIP with images) downloaded!");
+    } catch (err: any) {
+      toast.error("Failed to download full archive ZIP");
+    } finally {
+      setDownloadingZip(false);
     }
   }
 
@@ -86,45 +118,77 @@ export default function AdminBackupPage() {
     if (!file) return;
 
     setSelectedFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const text = evt.target?.result as string;
-        const parsed = JSON.parse(text);
-        if (!parsed || typeof parsed !== "object") {
-          throw new Error("Invalid structure");
+    const isZip = file.name.endsWith(".zip");
+    setSelectedFileIsZip(isZip);
+
+    if (isZip) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const arrayBuffer = evt.target?.result as ArrayBuffer;
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = "";
+        for (let i = 0; i < bytes.byteLength; i++) {
+          binary += String.fromCharCode(bytes[i]);
         }
-        setSelectedFileContent(text);
+        const base64 = window.btoa(binary);
+        setSelectedFileContent(base64);
         setPreviewStats({
-          customers: Array.isArray(parsed.customers) ? parsed.customers.length : 0,
-          items: Array.isArray(parsed.items) ? parsed.items.length : 0,
-          cycles: Array.isArray(parsed.cycles) ? parsed.cycles.length : 0,
-          orders: Array.isArray(parsed.orders) ? parsed.orders.length : 0,
-          branches: Array.isArray(parsed.branches) ? parsed.branches.length : 0,
-          brands: Array.isArray(parsed.brands) ? parsed.brands.length : 0,
+          isZip: true,
+          fileName: file.name,
+          sizeFormatted: `${(file.size / 1024).toFixed(1)} KB`,
         });
-        toast.info(`File verified: ${file.name}`);
-      } catch (err) {
-        setSelectedFileContent(null);
-        setPreviewStats(null);
-        toast.error("Invalid JSON file. Please select a valid store.json file.");
-      }
-    };
-    reader.readAsText(file);
+        toast.info(`Full ZIP Archive verified: ${file.name}`);
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const text = evt.target?.result as string;
+          const parsed = JSON.parse(text);
+          if (!parsed || typeof parsed !== "object") {
+            throw new Error("Invalid structure");
+          }
+          setSelectedFileContent(text);
+          setPreviewStats({
+            isZip: false,
+            customers: Array.isArray(parsed.customers) ? parsed.customers.length : 0,
+            items: Array.isArray(parsed.items) ? parsed.items.length : 0,
+            cycles: Array.isArray(parsed.cycles) ? parsed.cycles.length : 0,
+            orders: Array.isArray(parsed.orders) ? parsed.orders.length : 0,
+            branches: Array.isArray(parsed.branches) ? parsed.branches.length : 0,
+            brands: Array.isArray(parsed.brands) ? parsed.brands.length : 0,
+          });
+          toast.info(`JSON File verified: ${file.name}`);
+        } catch (err) {
+          setSelectedFileContent(null);
+          setPreviewStats(null);
+          toast.error("Invalid JSON file. Please select a valid store.json or backup ZIP file.");
+        }
+      };
+      reader.readAsText(file);
+    }
   }
 
   async function handleExecuteRestore() {
     if (!selectedFileContent) {
-      toast.error("Please select a valid store.json file first");
+      toast.error("Please select a valid store.json or .zip backup file first");
       return;
     }
 
     setRestoring(true);
     try {
-      const res = await restoreDatabaseAction("demo-admin", selectedFileContent);
-      toast.success(
-        `🎉 Store restored! Loaded ${res.stats.customers} customers, ${res.stats.items} items, ${res.stats.orders} orders.`
-      );
+      if (selectedFileIsZip) {
+        const res = await restoreDatabaseZipAction("demo-admin", selectedFileContent);
+        toast.success(
+          `🎉 Store & Images restored from ZIP! Loaded ${res.stats.customers} customers, ${res.stats.items} items, ${res.stats.orders} orders.`
+        );
+      } else {
+        const res = await restoreDatabaseAction("demo-admin", selectedFileContent);
+        toast.success(
+          `🎉 Store restored from JSON! Loaded ${res.stats.customers} customers, ${res.stats.items} items, ${res.stats.orders} orders.`
+        );
+      }
       setRestoreModalOpen(false);
       setSelectedFileContent(null);
       setSelectedFileName(null);
@@ -138,7 +202,7 @@ export default function AdminBackupPage() {
   }
 
   async function handleRestoreSnapshot(filename: string) {
-    if (!confirm(`Are you sure you want to restore snapshot "${filename}"? A safety backup will be created first.`)) {
+    if (!confirm(`Are you sure you want to restore snapshot "${filename}"? A mandatory safety backup will be created first.`)) {
       return;
     }
 
@@ -161,11 +225,11 @@ export default function AdminBackupPage() {
             <span>Database Integrity & Backup Management</span>
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Safeguard, download, and restore your live store database (customers, items, harvest cycles, and orders).
+            Safeguard, download, and restore your live store database (customers, items, harvest cycles, orders, and product images).
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -178,12 +242,22 @@ export default function AdminBackupPage() {
           </Button>
 
           <Button
-            onClick={handleDownloadBackup}
-            disabled={downloading}
-            className="rounded-2xl bg-primary text-white font-bold text-xs h-10 px-4 shadow gap-1.5"
+            onClick={handleDownloadJsonBackup}
+            disabled={downloadingJson}
+            variant="outline"
+            className="rounded-2xl border-primary/40 text-primary font-semibold text-xs h-10 px-3.5 shadow-sm gap-1.5"
           >
             <Download className="h-4 w-4" />
-            {downloading ? "Exporting..." : "Download Live Backup"}
+            {downloadingJson ? "Exporting..." : "Download DB (.JSON)"}
+          </Button>
+
+          <Button
+            onClick={handleDownloadZipBackup}
+            disabled={downloadingZip}
+            className="rounded-2xl bg-primary text-white font-bold text-xs h-10 px-4 shadow gap-1.5"
+          >
+            <FileArchive className="h-4 w-4" />
+            {downloadingZip ? "Archiving..." : "Download Full Archive (.ZIP)"}
           </Button>
 
           <Button
@@ -263,36 +337,42 @@ export default function AdminBackupPage() {
                 <h3 className="font-serif font-bold text-base text-foreground">
                   Live Storage Engine & Persistence Status
                 </h3>
-                {overview?.diagnostics?.isRailwayVolume ? (
+                {overview?.diagnostics?.isVolume ? (
                   <Badge className="bg-emerald-600 text-white text-[10px] font-mono px-2 py-0.5">
                     ✓ Railway Volume Active (/app/data)
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50 text-[10px] font-mono px-2 py-0.5">
-                    Storage: {overview?.diagnostics?.activeDirectory || "Local Disk"}
+                    Storage: {overview?.diagnostics?.activeDir || "Local Disk"}
                   </Badge>
                 )}
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed mt-1">
-                Your store writes atomically with automated daily snapshots and startup schema validation.
+                Your store writes atomically with an automated 5-snapshot rolling retention policy and permanent browser image caching.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Live Diagnostics Card */}
+        {/* Live Diagnostics Metrics */}
         {overview?.diagnostics && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-background/90 rounded-2xl p-3.5 text-xs border">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-background/90 rounded-2xl p-3.5 text-xs border">
             <div>
-              <span className="text-muted-foreground block text-[11px]">Storage Directory</span>
+              <span className="text-muted-foreground block text-[11px]">Active Directory</span>
               <span className="font-mono font-bold text-foreground text-xs break-all">
-                {overview.diagnostics.activeDirectory}
+                {overview.diagnostics.activeDir}
               </span>
             </div>
             <div>
               <span className="text-muted-foreground block text-[11px]">Database File Size</span>
+              <span className="font-mono font-bold text-emerald-700 text-xs">
+                {overview.diagnostics.fileSizeFormatted} (<strong className="font-sans">Ultra-lean</strong>)
+              </span>
+            </div>
+            <div>
+              <span className="text-muted-foreground block text-[11px]">Uploaded Images</span>
               <span className="font-mono font-bold text-foreground text-xs">
-                {overview.diagnostics.fileSizeFormatted}
+                {overview.diagnostics.uploadFilesCount || 0} files ({overview.diagnostics.uploadFilesTotalSizeFormatted || "0 MB"})
               </span>
             </div>
             <div>
@@ -305,31 +385,32 @@ export default function AdminBackupPage() {
         )}
 
         <div className="bg-background/80 rounded-2xl p-3.5 text-xs space-y-2 border">
-          <div className="font-semibold text-foreground">Railway Persistent Volume Instructions:</div>
-          <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-            <li>Ensure a volume is attached in your Railway dashboard with mount path <strong className="font-mono text-foreground">/app/data</strong>.</li>
-            <li>Deployments automatically detect this mount and retain all customer, catalogue, cycle, and order data across code redeploys.</li>
-          </ol>
+          <div className="font-semibold text-foreground">Storage & Image Optimization Highlights:</div>
+          <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+            <li><strong>Decoupled Images:</strong> All product and category images are saved in <code className="font-mono text-foreground">/uploads</code>, keeping <code className="font-mono text-foreground">store.json</code> under 1 MB.</li>
+            <li><strong>Browser Caching:</strong> Images are served with immutable cache headers so customer mobile phones load them instantly.</li>
+            <li><strong>5-Snapshot Retention:</strong> The server automatically maintains strictly the last 5 rotating daily snapshots to protect disk space on your Railway plan.</li>
+          </ul>
         </div>
       </Card>
 
-      {/* Automated Local Snapshots */}
+      {/* Automated Local Snapshots (Last 5) */}
       <Card className="p-5 rounded-3xl border bg-card shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <History className="h-5 w-5 text-primary" />
             <h3 className="font-serif font-bold text-base text-foreground">
-              Automated System Snapshots (data/backups)
+              Automated Snapshots (Strict 5-Snapshot Rolling Limit)
             </h3>
           </div>
           <span className="text-xs text-muted-foreground">
-            {overview?.backups?.length || 0} snapshot(s) available
+            {overview?.backups?.length || 0} of 5 active snapshot(s)
           </span>
         </div>
 
         {overview?.backups?.length === 0 ? (
           <div className="rounded-2xl bg-muted/40 p-6 text-center text-xs text-muted-foreground">
-            No automatic snapshots recorded yet. Snapshots are created automatically every day on save.
+            No automatic snapshots recorded yet. Snapshots are created automatically on every daily save or manual update.
           </div>
         ) : (
           <div className="rounded-2xl border overflow-hidden divide-y text-xs">
@@ -365,23 +446,23 @@ export default function AdminBackupPage() {
           <DialogHeader>
             <DialogTitle className="font-serif text-xl flex items-center gap-2">
               <Upload className="h-5 w-5 text-emerald-600" />
-              <span>Restore Database from File (.json)</span>
+              <span>Restore Database from File (.json or .zip)</span>
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 pt-2">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Upload your saved <code className="bg-muted px-1.5 py-0.5 rounded font-mono font-semibold">store.json</code> backup file. The system will validate the schema, automatically migrate all fields, and restore your live data immediately.
+              Upload your saved <code className="bg-muted px-1.5 py-0.5 rounded font-mono font-semibold">store.json</code> or complete <code className="bg-muted px-1.5 py-0.5 rounded font-mono font-semibold">archive.zip</code> file. A mandatory safety snapshot will be created before applying changes.
             </p>
 
             <div className="border-2 border-dashed border-border rounded-2xl p-6 text-center space-y-2">
               <Database className="mx-auto h-8 w-8 text-muted-foreground" />
               <div className="text-xs font-semibold text-foreground">
-                {selectedFileName ? selectedFileName : "Choose store.json backup file"}
+                {selectedFileName ? selectedFileName : "Choose .json or .zip backup file"}
               </div>
               <input
                 type="file"
-                accept=".json"
+                accept=".json,.zip"
                 onChange={handleFileSelected}
                 className="text-xs file:mr-2 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
               />
@@ -393,14 +474,20 @@ export default function AdminBackupPage() {
                   <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                   <span>Backup File Verified Ready to Restore:</span>
                 </div>
-                <div className="grid grid-cols-3 gap-2 font-mono text-emerald-900 pt-1">
-                  <div>Customers: <strong>{previewStats.customers}</strong></div>
-                  <div>Items: <strong>{previewStats.items}</strong></div>
-                  <div>Cycles: <strong>{previewStats.cycles}</strong></div>
-                  <div>Orders: <strong>{previewStats.orders}</strong></div>
-                  <div>Branches: <strong>{previewStats.branches}</strong></div>
-                  <div>Brands: <strong>{previewStats.brands}</strong></div>
-                </div>
+                {previewStats.isZip ? (
+                  <div className="text-emerald-900 font-mono text-xs">
+                    Archive: <strong>{previewStats.fileName}</strong> ({previewStats.sizeFormatted}) — Contains database and all product images.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2 font-mono text-emerald-900 pt-1">
+                    <div>Customers: <strong>{previewStats.customers}</strong></div>
+                    <div>Items: <strong>{previewStats.items}</strong></div>
+                    <div>Cycles: <strong>{previewStats.cycles}</strong></div>
+                    <div>Orders: <strong>{previewStats.orders}</strong></div>
+                    <div>Branches: <strong>{previewStats.branches}</strong></div>
+                    <div>Brands: <strong>{previewStats.brands}</strong></div>
+                  </div>
+                )}
               </div>
             )}
 

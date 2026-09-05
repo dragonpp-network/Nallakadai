@@ -1,6 +1,8 @@
 "use server";
 
-import crypto from "crypto";
+import fs from "fs";
+import path from "path";
+import JSZip from "jszip";
 import { db, requireAdmin, requireSuperAdmin, branchScope, logAudit, DEFAULT_SUPER_ADMIN_ID, type AdminCtx } from "@/lib/supabase/server";
 import {
   getLocalStore,
@@ -11,6 +13,7 @@ import {
   listStoreBackups,
   restoreFromBackupFile,
   getStorageDiagnostics,
+  getUploadsDirectory,
 } from "@/lib/data-store";
 
 /**
@@ -1641,5 +1644,65 @@ export async function restoreSnapshotByNameAction(
   await requireAdmin(userId);
   return restoreFromBackupFile(filename);
 }
+
+export async function exportDatabaseZipAction(userId: string = DEFAULT_SUPER_ADMIN_ID) {
+  await requireAdmin(userId);
+  const store = getLocalStore();
+  const uploadsDir = getUploadsDirectory();
+
+  const zip = new JSZip();
+  // 1. Add store.json
+  zip.file("store.json", JSON.stringify(store, null, 2));
+
+  // 2. Add all image files in uploads/
+  if (fs.existsSync(uploadsDir)) {
+    const uploadFiles = fs.readdirSync(uploadsDir);
+    const uploadsFolder = zip.folder("uploads");
+    for (const f of uploadFiles) {
+      try {
+        const fullPath = path.join(uploadsDir, f);
+        const fileData = fs.readFileSync(fullPath);
+        uploadsFolder?.file(f, fileData);
+      } catch (err) {
+        console.warn(`Could not add ${f} to zip:`, err);
+      }
+    }
+  }
+
+  const zipBase64 = await zip.generateAsync({ type: "base64", compression: "DEFLATE" });
+  return zipBase64;
+}
+
+export async function restoreDatabaseZipAction(
+  userId: string = DEFAULT_SUPER_ADMIN_ID,
+  zipBase64: string
+) {
+  await requireAdmin(userId);
+  const zip = await JSZip.loadAsync(Buffer.from(zipBase64, "base64"));
+
+  // 1. Find store.json in the zip
+  const storeFile = zip.file("store.json");
+  if (!storeFile) {
+    throw new Error("Invalid backup archive: 'store.json' not found inside the ZIP file.");
+  }
+  const storeJsonStr = await storeFile.async("string");
+
+  // 2. Extract all images to uploads/
+  const uploadsDir = getUploadsDirectory();
+  const fileNames = Object.keys(zip.files);
+  for (const name of fileNames) {
+    if (name.startsWith("uploads/") && !zip.files[name].dir) {
+      const fileNameOnly = path.basename(name);
+      if (fileNameOnly) {
+        const fileData = await zip.files[name].async("nodebuffer");
+        fs.writeFileSync(path.join(uploadsDir, fileNameOnly), fileData);
+      }
+    }
+  }
+
+  // 3. Restore and migrate database
+  return restoreStoreFromJson(storeJsonStr);
+}
+
 
 
