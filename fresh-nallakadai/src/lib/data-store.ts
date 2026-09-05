@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 import {
   INITIAL_BRANCHES,
   INITIAL_BRANDS,
@@ -10,11 +11,6 @@ import {
   INITIAL_CYCLE,
   INITIAL_ORDERS,
 } from "./mock-data";
-
-const DATA_DIR = path.join(process.cwd(), "data");
-const STORE_FILE = path.join(DATA_DIR, "store.json");
-const FALLBACK_DIR = "/tmp/nk-data";
-const FALLBACK_FILE = path.join(FALLBACK_DIR, "store.json");
 
 export interface StoreState {
   branches: typeof INITIAL_BRANCHES;
@@ -51,6 +47,7 @@ export interface StoreState {
 // Global In-Memory Singleton Cache
 declare global {
   var __nk_store: StoreState | undefined;
+  var __nk_active_dir: string | undefined;
 }
 
 function getDefaultState(): StoreState {
@@ -109,23 +106,108 @@ function getDefaultState(): StoreState {
   };
 }
 
-function getStorageFilePath(): string {
-  try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    return STORE_FILE;
-  } catch (err) {
-    // Fallback to /tmp in restricted container environments
+/**
+ * Multi-Tier Storage Directory Discovery
+ * Prioritizes persistent volume locations across Railway, Docker, and local development.
+ */
+export function getStorageDirectory(): string {
+  if (globalThis.__nk_active_dir) {
+    return globalThis.__nk_active_dir;
+  }
+
+  const candidateDirs: string[] = [];
+
+  // 1. Explicit environment variable if configured
+  if (process.env.DATA_DIR && process.env.DATA_DIR.trim() !== "") {
+    candidateDirs.push(process.env.DATA_DIR.trim());
+  }
+
+  // 2. Standard Railway volume mount path (/app/data)
+  candidateDirs.push("/app/data");
+
+  // 3. Alternative standard volume mount path (/data)
+  candidateDirs.push("/data");
+
+  // 4. Local application relative directory (process.cwd()/data)
+  candidateDirs.push(path.join(process.cwd(), "data"));
+
+  // 5. Ephemeral fallback
+  candidateDirs.push("/tmp/nk-data");
+
+  for (const dir of candidateDirs) {
     try {
-      if (!fs.existsSync(FALLBACK_DIR)) {
-        fs.mkdirSync(FALLBACK_DIR, { recursive: true });
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
       }
-      return FALLBACK_FILE;
+      // Test write permissions
+      const testFile = path.join(dir, `.nk_test_${Date.now()}`);
+      fs.writeFileSync(testFile, "test", "utf8");
+      fs.unlinkSync(testFile);
+
+      globalThis.__nk_active_dir = dir;
+      console.log(`[Storage] Selected active persistent storage directory: ${dir}`);
+      return dir;
     } catch {
-      return STORE_FILE;
+      // Continue to next candidate
     }
   }
+
+  // Fallback to /tmp
+  const fallback = "/tmp/nk-data";
+  try {
+    if (!fs.existsSync(fallback)) fs.mkdirSync(fallback, { recursive: true });
+  } catch {}
+  globalThis.__nk_active_dir = fallback;
+  return fallback;
+}
+
+export function getStorageFilePath(): string {
+  const dir = getStorageDirectory();
+  return path.join(dir, "store.json");
+}
+
+export function getBackupDirectory(): string {
+  const dir = getStorageDirectory();
+  const backupDir = path.join(dir, "backups");
+  try {
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+  } catch {}
+  return backupDir;
+}
+
+/**
+ * Startup Deduplication Sanitizer
+ * Scans arrays to guarantee no duplicate IDs exist in the database.
+ */
+function sanitizeDuplicateIds(store: StoreState): boolean {
+  let changed = false;
+
+  function ensureUniqueIds<T extends { id: string }>(items: T[]): T[] {
+    const seen = new Set<string>();
+    for (let i = 0; i < items.length; i++) {
+      if (!items[i].id || seen.has(items[i].id)) {
+        items[i] = {
+          ...items[i],
+          id: crypto.randomUUID(),
+        };
+        changed = true;
+      }
+      seen.add(items[i].id);
+    }
+    return items;
+  }
+
+  if (Array.isArray(store.items)) ensureUniqueIds(store.items);
+  if (Array.isArray(store.categories)) ensureUniqueIds(store.categories);
+  if (Array.isArray(store.brands)) ensureUniqueIds(store.brands);
+  if (Array.isArray(store.customers)) ensureUniqueIds(store.customers);
+  if (Array.isArray(store.coupons)) ensureUniqueIds(store.coupons);
+  if (Array.isArray(store.branches)) ensureUniqueIds(store.branches);
+  if (Array.isArray(store.cycles)) ensureUniqueIds(store.cycles);
+
+  return changed;
 }
 
 export function getLocalStore(): StoreState {
@@ -138,33 +220,52 @@ export function getLocalStore(): StoreState {
     if (!fs.existsSync(targetFile)) {
       const initial = getDefaultState();
       try {
-        fs.writeFileSync(targetFile, JSON.stringify(initial, null, 2), "utf8");
+        saveLocalStore(initial, true);
       } catch (e) {
         console.warn("Could not write initial store file, using in-memory:", e);
       }
       globalThis.__nk_store = initial;
       return initial;
     }
-    const content = fs.readFileSync(targetFile, "utf8");
-    const parsed = JSON.parse(content);
-    if (!parsed.brands) parsed.brands = [...INITIAL_BRANDS];
-    if (!parsed.coupons) parsed.coupons = [...INITIAL_COUPONS];
 
+    const content = fs.readFileSync(targetFile, "utf8");
+    const parsed: StoreState = JSON.parse(content);
+
+    if (!parsed.branches) parsed.branches = [...INITIAL_BRANCHES];
+    if (!parsed.brands) parsed.brands = [...INITIAL_BRANDS];
+    if (!parsed.categories) parsed.categories = [...INITIAL_CATEGORIES];
+    if (!parsed.coupons) parsed.coupons = [...INITIAL_COUPONS];
+    if (!parsed.customers) parsed.customers = [];
+    if (!parsed.items) parsed.items = [...INITIAL_ITEMS];
+    if (!parsed.cycles) parsed.cycles = [INITIAL_CYCLE];
+    if (!parsed.cycle_items) parsed.cycle_items = [];
+    if (!parsed.orders) parsed.orders = [];
+    if (!parsed.admin_users) parsed.admin_users = getDefaultState().admin_users;
+    if (!parsed.audit_logs) parsed.audit_logs = [];
+
+    // Backfill missing schema fields
     for (const c of parsed.coupons || []) {
       if (c.show_on_cart === undefined) c.show_on_cart = true;
     }
 
     for (const cy of parsed.cycles || []) {
-      if (cy.collection_timing === undefined) {
+      if ((cy as any).collection_timing === undefined) {
         const branch = (parsed.branches || []).find((b: any) => b.id === cy.branch_id);
-        cy.collection_timing = branch?.collection_timing || "Tuesday 7:00 AM - 10:00 AM";
+        (cy as any).collection_timing = branch?.collection_timing || "Tuesday 7:00 AM - 10:00 AM";
       }
     }
 
     for (const item of parsed.items || []) {
-      if (item.procurement_cost === undefined) item.procurement_cost = Math.round(item.price * 0.7);
-      if (item.selling_price === undefined) item.selling_price = item.price;
+      if (item.procurement_cost === undefined) item.procurement_cost = Math.round((item.price || 50) * 0.7);
+      if (item.selling_price === undefined) item.selling_price = item.price || 50;
       if (item.discount_percent === undefined) item.discount_percent = 0;
+    }
+
+    // Sanitize any duplicate IDs automatically
+    const idsFixed = sanitizeDuplicateIds(parsed);
+    if (idsFixed) {
+      console.log("[Storage] Automatically repaired and deduplicated IDs in store.json");
+      saveLocalStore(parsed, true);
     }
 
     globalThis.__nk_store = parsed;
@@ -177,26 +278,22 @@ export function getLocalStore(): StoreState {
   }
 }
 
-const BACKUP_DIR = path.join(DATA_DIR, "backups");
-
-export function getBackupDirectory(): string {
-  try {
-    if (!fs.existsSync(BACKUP_DIR)) {
-      fs.mkdirSync(BACKUP_DIR, { recursive: true });
-    }
-    return BACKUP_DIR;
-  } catch {
-    return DATA_DIR;
-  }
-}
-
+/**
+ * Save StoreState atomically to disk with daily snapshots
+ */
 export function saveLocalStore(store: StoreState, skipSnapshot: boolean = false) {
   globalThis.__nk_store = store;
   try {
     const targetFile = getStorageFilePath();
-    fs.writeFileSync(targetFile, JSON.stringify(store, null, 2), "utf8");
+    const tempFile = `${targetFile}.tmp.${Date.now()}`;
 
-    // Auto-save daily snapshot in data/backups
+    // 1. Atomic write to temporary file
+    fs.writeFileSync(tempFile, JSON.stringify(store, null, 2), "utf8");
+
+    // 2. Atomic rename to target file (guarantees zero partial file corruption)
+    fs.renameSync(tempFile, targetFile);
+
+    // 3. Auto-save daily snapshot in backups folder
     if (!skipSnapshot) {
       try {
         const bDir = getBackupDirectory();
@@ -204,21 +301,14 @@ export function saveLocalStore(store: StoreState, skipSnapshot: boolean = false)
         const autoBackupPath = path.join(bDir, `store_auto_backup_${todayStr}.json`);
         fs.writeFileSync(autoBackupPath, JSON.stringify(store, null, 2), "utf8");
 
-        // Keep last 15 snapshots
+        // Retain last 15 rotating snapshots
         cleanOldBackups(bDir, 15);
       } catch (snapErr) {
         console.warn("Could not write daily backup snapshot:", snapErr);
       }
     }
   } catch (err) {
-    try {
-      if (!fs.existsSync(FALLBACK_DIR)) {
-        fs.mkdirSync(FALLBACK_DIR, { recursive: true });
-      }
-      fs.writeFileSync(FALLBACK_FILE, JSON.stringify(store, null, 2), "utf8");
-    } catch (fallbackErr) {
-      console.warn("Could not persist to disk, store kept in memory:", fallbackErr);
-    }
+    console.error("Error saving store to disk:", err);
   }
 }
 
@@ -245,7 +335,7 @@ function cleanOldBackups(dir: string, maxKeep: number = 15) {
 }
 
 /**
- * Restore Store from JSON string with full auto-migration
+ * Restore Store from JSON string with full auto-migration & deduplication
  */
 export function restoreStoreFromJson(jsonContent: string): {
   success: boolean;
@@ -301,9 +391,9 @@ export function restoreStoreFromJson(jsonContent: string): {
   }
 
   for (const cy of migrated.cycles || []) {
-    if (cy.collection_timing === undefined) {
+    if ((cy as any).collection_timing === undefined) {
       const branch = (migrated.branches || []).find((b: any) => b.id === cy.branch_id);
-      cy.collection_timing = branch?.collection_timing || "Tuesday 7:00 AM - 10:00 AM";
+      (cy as any).collection_timing = branch?.collection_timing || "Tuesday 7:00 AM - 10:00 AM";
     }
   }
 
@@ -313,11 +403,14 @@ export function restoreStoreFromJson(jsonContent: string): {
     if (item.discount_percent === undefined) item.discount_percent = 0;
   }
 
+  // Deduplicate IDs
+  sanitizeDuplicateIds(migrated);
+
   saveLocalStore(migrated);
 
   return {
     success: true,
-    message: "Store restored and migrated successfully!",
+    message: "Store restored, deduplicated, and migrated successfully!",
     stats: {
       customers: migrated.customers.length,
       items: migrated.items.length,
@@ -375,4 +468,31 @@ export function clearLocalStoreOrders() {
 export function resetLocalStoreDemoData() {
   const initial = getDefaultState();
   saveLocalStore(initial);
+}
+
+/**
+ * Get storage diagnostics for admin dashboard
+ */
+export function getStorageDiagnostics() {
+  const activeDir = getStorageDirectory();
+  const activeFile = getStorageFilePath();
+  let fileSize = 0;
+  let lastModified = "";
+  let isVolume = activeDir.startsWith("/app/data") || activeDir.startsWith("/data");
+
+  try {
+    if (fs.existsSync(activeFile)) {
+      const stat = fs.statSync(activeFile);
+      fileSize = stat.size;
+      lastModified = stat.mtime.toISOString();
+    }
+  } catch {}
+
+  return {
+    activeDir,
+    activeFile,
+    fileSize,
+    lastModified,
+    isVolume,
+  };
 }
