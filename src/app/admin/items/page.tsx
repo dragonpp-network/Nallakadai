@@ -785,7 +785,33 @@ export default function AdminItemsPage() {
                 <Label className="text-xs font-semibold">Unit of Measure</Label>
                 <select
                   value={unit}
-                  onChange={(e) => setUnit(e.target.value)}
+                  onChange={(e) => {
+                    const u = e.target.value;
+                    setUnit(u);
+                    if (!editingItem) {
+                      if (u === "Gram") {
+                        setPresetsStr("100, 250, 500");
+                        setMinQty(50);
+                        setMaxQty(2000);
+                      } else if (u === "Nos") {
+                        setPresetsStr("1, 2, 5, 10");
+                        setMinQty(1);
+                        setMaxQty(25);
+                      } else if (u === "Litre") {
+                        setPresetsStr("0.5, 1, 2");
+                        setMinQty(0.5);
+                        setMaxQty(10);
+                      } else if (u === "Ml") {
+                        setPresetsStr("250, 500, 1000");
+                        setMinQty(100);
+                        setMaxQty(5000);
+                      } else {
+                        setPresetsStr("0.5, 1, 2");
+                        setMinQty(0.25);
+                        setMaxQty(10);
+                      }
+                    }
+                  }}
                   className="w-full mt-1 rounded-xl border p-2.5 text-sm bg-background"
                 >
                   <option value="Kg">Kg</option>

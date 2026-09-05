@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, Plus, Upload, Phone, Edit, UserCheck, UserX } from "lucide-react";
+import { Search, Plus, Upload, Download, Phone, Edit, UserCheck, UserX } from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 
@@ -105,7 +105,59 @@ export default function AdminCustomersPage() {
     }
   }
 
-  // Bulk CSV Upload handler (FR-1.6)
+  // Download Sample Customer CSV Template
+  function downloadSampleCustomerCsv() {
+    const sampleRows = [
+      {
+        Name: "Lavanya",
+        Mobile: "9489581155",
+        AltMobile: "9789198007",
+        Address: "Mollapalayam",
+        Area: "Erode",
+        DeliveryMode: "Door Delivery",
+      },
+      {
+        Name: "Nithya sree",
+        Mobile: "7010402141",
+        AltMobile: "",
+        Address: "45 Gandhi Road",
+        Area: "Erode",
+        DeliveryMode: "Customer Pickup",
+      },
+      {
+        Name: "Dr Umapathy",
+        Mobile: "7502209993",
+        AltMobile: "",
+        Address: "12 Doctors Colony",
+        Area: "Erode",
+        DeliveryMode: "Door Delivery",
+      },
+      {
+        Name: "Arthi",
+        Mobile: "9789864567",
+        AltMobile: "",
+        Address: "Indian Nagar",
+        Area: "Erode",
+        DeliveryMode: "Customer Pickup",
+      },
+      {
+        Name: "Raja Gopal",
+        Mobile: "9842725971",
+        AltMobile: "9789198007",
+        Address: "Sivagiri",
+        Area: "Erode",
+        DeliveryMode: "Customer Pickup",
+      },
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(sampleRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Customers_Template");
+    XLSX.writeFile(wb, "Nallakadai_Customer_Import_Template.xlsx");
+    toast.success("Sample template downloaded!");
+  }
+
+  // Bulk CSV Upload handler with Fuzzy Header Normalization
   function handleCsvUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -121,20 +173,48 @@ export default function AdminCustomersPage() {
         let successCount = 0;
         let rejectCount = 0;
 
-        for (const row of rows) {
-          const rawPhone = String(row.Mobile || row.mobile || row.Phone || "").replace(/\D/g, "");
-          const custName = row.Name || row.name || "Customer";
+        for (const rawRow of rows) {
+          // Normalize all object keys (trim, lowercase, remove non-alphanumeric)
+          const norm: Record<string, any> = {};
+          for (const k of Object.keys(rawRow)) {
+            const cleanKey = k.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+            norm[cleanKey] = rawRow[k];
+          }
+
+          // Extract values with flexible fallbacks
+          const rawPhone = String(
+            norm.mobile || norm.phone || norm.mobilenumber || norm.phonenumber || norm.primarymobile || norm.contact || ""
+          ).replace(/\D/g, "");
+
+          const custName = String(
+            norm.name || norm.customername || norm.fullname || norm.custname || norm.clientname || ""
+          ).trim() || "Customer";
+
+          const altMobile = String(
+            norm.altmobile || norm.alternatephone || norm.alternatemobile || norm.altphone || norm.alt || ""
+          ).replace(/\D/g, "");
+
+          const deliveryAddress = String(
+            norm.address || norm.deliveryaddress || norm.street || norm.flat || ""
+          ).trim();
+
+          const areaLocality = String(
+            norm.area || norm.locality || norm.landmark || norm.city || ""
+          ).trim();
+
+          const rawMode = String(norm.deliverymode || norm.mode || norm.type || "").toLowerCase();
+          const deliveryMode = rawMode.includes("pickup") ? "Customer Pickup" : "Door Delivery";
 
           if (rawPhone.length >= 10) {
             try {
               await saveCustomerAction("demo-admin", {
                 name: custName,
                 mobile: rawPhone.slice(-10),
-                altMobile: row.AltMobile ? String(row.AltMobile).slice(-10) : undefined,
+                altMobile: altMobile.length >= 10 ? altMobile.slice(-10) : undefined,
                 branchId: branchId || branches[0]?.id,
-                deliveryMode: row.DeliveryMode === "Customer Pickup" ? "Customer Pickup" : "Door Delivery",
-                address: row.Address || "",
-                area: row.Area || "",
+                deliveryMode,
+                address: deliveryAddress,
+                area: areaLocality,
                 active: true,
               });
               successCount++;
@@ -150,7 +230,7 @@ export default function AdminCustomersPage() {
         setCsvModalOpen(false);
         loadData();
       } catch (err: any) {
-        toast.error("Failed to parse CSV file");
+        toast.error("Failed to parse spreadsheet file");
       }
     };
     reader.readAsBinaryString(file);
@@ -369,6 +449,19 @@ export default function AdminCustomersPage() {
             <p className="text-xs text-muted-foreground leading-relaxed">
               Upload a spreadsheet with columns: <strong>Name, Mobile, AltMobile, Address, Area, DeliveryMode</strong>.
             </p>
+
+            <div className="flex justify-start">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={downloadSampleCustomerCsv}
+                className="rounded-xl text-xs font-semibold gap-1.5 border-primary/30 text-primary hover:bg-primary/5"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download Sample Template (.xlsx)
+              </Button>
+            </div>
 
             <div className="border-2 border-dashed border-border rounded-2xl p-6 text-center">
               <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />

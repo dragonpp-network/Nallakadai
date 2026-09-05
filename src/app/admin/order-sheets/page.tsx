@@ -150,7 +150,7 @@ export default function AdminOrderSheetsPage() {
                           <td className="p-2.5 font-bold text-foreground">{line.nameEn}</td>
                           <td className="p-2.5 font-tamil text-muted-foreground text-sm">{line.nameTa || "—"}</td>
                           <td className="p-2.5 text-right font-bold text-sm text-primary font-mono">
-                            {line.qty} {line.unit}
+                            {line.displayQty || `${line.qty} ${line.unit}`}
                           </td>
                           <td className="p-2.5 text-center border-l text-muted-foreground text-xs font-mono">
                             _______ {line.unit}

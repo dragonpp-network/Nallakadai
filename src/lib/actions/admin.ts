@@ -644,11 +644,22 @@ export async function getOrderSheetsAction(cycleId: string) {
       lines: (o.lines || []).map((l: any) => {
         const masterItem = store.items.find((i) => i.id === l.item_id);
         const price = masterItem ? masterItem.price : Number(l.price);
+        const unit = masterItem?.unit || l.unit;
+        const packCount = Number(l.pack_count || 1);
+        const packSize = Number(l.pack_size || l.qty);
+        const totalQty = Number(l.qty);
+        const displayQty = packCount > 1
+          ? `${packCount} × ${packSize} ${unit} (${totalQty} ${unit})`
+          : `${totalQty} ${unit}`;
+
         return {
           nameEn: masterItem?.name_en || l.name_en,
           nameTa: masterItem?.name_ta || l.name_ta,
-          qty: Number(l.qty),
-          unit: masterItem?.unit || l.unit,
+          qty: totalQty,
+          packSize,
+          packCount,
+          displayQty,
+          unit,
           price,
         };
       }),

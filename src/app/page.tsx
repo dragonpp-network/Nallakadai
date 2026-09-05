@@ -82,7 +82,7 @@ export default function StorefrontPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   // Cart & Order State
-  const [cart, setCart] = useState<Record<string, number>>({});
+  const [cart, setCart] = useState<Record<string, { packSize: number; packCount: number }>>({});
   const [editingOrderNo, setEditingOrderNo] = useState<string | null>(null);
   const [deliveryMode, setDeliveryMode] = useState<"Door Delivery" | "Customer Pickup">("Door Delivery");
   const [address, setAddress] = useState("");
@@ -195,17 +195,17 @@ export default function StorefrontPage() {
     }
 
     const availMap = new Map(storeData?.items?.map((i: any) => [i.itemId, i]) || []);
-    const newCart: Record<string, number> = {};
+    const newCart: Record<string, { packSize: number; packCount: number }> = {};
     const droppedItems: string[] = [];
 
     for (const line of lines) {
       const itemId = line.item_id || line.itemId;
       const item = availMap.get(itemId);
       if (item && !item.soldOut) {
-        let q = Number(line.qty);
-        if (q < item.minQty) q = item.minQty;
-        if (q > item.maxQty) q = item.maxQty;
-        newCart[itemId] = q;
+        const packSize = Number(line.pack_size || line.packSize || item.presets?.[0] || line.qty || 1);
+        const totalQ = Number(line.qty || packSize);
+        const packCount = Number(line.pack_count || line.packCount || Math.max(1, Math.round(totalQ / packSize)));
+        newCart[itemId] = { packSize, packCount };
       } else {
         droppedItems.push(line.name_en || "Item");
       }
@@ -238,10 +238,14 @@ export default function StorefrontPage() {
     if (!target) return;
 
     const lines = target.order_items || target.lines || [];
-    const existing: Record<string, number> = {};
+    const existing: Record<string, { packSize: number; packCount: number }> = {};
     for (const item of lines) {
       const id = item.item_id || item.itemId || item.id;
-      existing[id] = Number(item.qty);
+      const meta = storeData?.items?.find((i: any) => i.itemId === id);
+      const packSize = Number(item.pack_size || item.packSize || meta?.presets?.[0] || item.qty || 1);
+      const totalQ = Number(item.qty || packSize);
+      const packCount = Number(item.pack_count || item.packCount || Math.max(1, Math.round(totalQ / packSize)));
+      existing[id] = { packSize, packCount };
     }
 
     setCart(existing);
@@ -254,27 +258,31 @@ export default function StorefrontPage() {
     toast.info(`Loaded Order ${target.order_no || target.orderNo} into Cart. You can adjust items and tap Update.`);
   }
 
-  function handleUpdateQty(itemId: string, qty: number, itemMeta: any) {
-    if (qty <= 0) {
-      const copy = { ...cart };
-      delete copy[itemId];
-      setCart(copy);
-      return;
-    }
-
-    const err = validateQty(qty, {
-      name: itemMeta.nameEn,
-      unit: itemMeta.unit,
-      min: itemMeta.minQty,
-      max: itemMeta.maxQty,
+  function handleSelectPack(itemId: string, packSize: number, itemMeta: any) {
+    setCart((prev) => {
+      const existing = prev[itemId];
+      const packCount = existing && existing.packCount > 0 ? existing.packCount : 1;
+      return {
+        ...prev,
+        [itemId]: { packSize, packCount },
+      };
     });
+  }
 
-    if (err) {
-      toast.error(err);
-      return;
-    }
-
-    setCart((prev) => ({ ...prev, [itemId]: qty }));
+  function handleUpdatePackCount(itemId: string, packCount: number, itemMeta: any) {
+    setCart((prev) => {
+      if (packCount <= 0) {
+        const copy = { ...prev };
+        delete copy[itemId];
+        return copy;
+      }
+      const existing = prev[itemId];
+      const packSize = existing?.packSize !== undefined ? existing.packSize : (itemMeta.presets?.[0] || 1);
+      return {
+        ...prev,
+        [itemId]: { packSize, packCount },
+      };
+    });
   }
 
   function handleClearCart() {
@@ -288,16 +296,35 @@ export default function StorefrontPage() {
   const cartLines = useMemo(() => {
     if (!storeData?.items) return [];
     return Object.entries(cart)
-      .map(([itemId, qty]) => {
+      .map(([itemId, entry]) => {
         const item = storeData.items.find((i: any) => i.itemId === itemId);
-        if (!item || qty <= 0) return null;
+        if (!item || !entry || !entry.packCount || entry.packCount <= 0) return null;
+        const packSize = Number(entry.packSize !== undefined ? entry.packSize : (item.presets?.[0] || 1));
+        const packCount = Number(entry.packCount || 1);
+        const totalQty = Math.round(packCount * packSize * 100) / 100;
+
+        let lineTotal = 0;
+        const price = Number(item.price || 0);
+        if (item.unit === "Gram") {
+          if (price >= 1) {
+            lineTotal = (totalQty / 1000) * price;
+          } else {
+            lineTotal = totalQty * price;
+          }
+        } else {
+          lineTotal = totalQty * price;
+        }
+        lineTotal = Math.round(lineTotal * 100) / 100;
+
         return {
           item,
-          qty,
-          lineTotal: qty * (item.price || 0),
+          packSize,
+          packCount,
+          qty: totalQty,
+          lineTotal,
         };
       })
-      .filter(Boolean) as { item: any; qty: number; lineTotal: number }[];
+      .filter(Boolean) as { item: any; packSize: number; packCount: number; qty: number; lineTotal: number }[];
   }, [cart, storeData]);
 
   const subtotalAmount = cartLines.reduce((sum, l) => sum + l.lineTotal, 0);
@@ -378,7 +405,13 @@ export default function StorefrontPage() {
         note,
         couponCode: appliedCoupon?.code,
         discountAmount: discountAmount,
-        lines: cartLines.map((l) => ({ itemId: l.item.itemId, qty: l.qty })),
+        lines: cartLines.map((l) => ({
+          itemId: l.item.itemId,
+          packSize: l.packSize,
+          packCount: l.packCount,
+          qty: l.qty,
+          lineTotal: l.lineTotal,
+        })),
       });
 
       setConfirmedOrderDetails({
@@ -887,11 +920,16 @@ export default function StorefrontPage() {
             ) : (
               <div className="space-y-3">
                 {filteredItems.map((item: any) => {
-                  const qty = cart[item.itemId] || 0;
+                  const entry = cart[item.itemId];
+                  const activePackSize = entry?.packSize !== undefined ? entry.packSize : (item.presets?.[0] || 1);
+                  const packCount = entry?.packCount || 0;
+                  const isSelected = packCount > 0;
                   return (
                     <div
                       key={item.itemId}
-                      className="rounded-3xl border bg-card p-4 shadow-sm hover:shadow-md transition flex flex-col justify-between gap-3"
+                      className={`rounded-3xl border bg-card p-4 shadow-sm hover:shadow-md transition flex flex-col justify-between gap-3 ${
+                        isSelected ? "border-primary/40 ring-1 ring-primary/20 bg-primary/2" : ""
+                      }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-start gap-3 flex-1">
@@ -936,51 +974,56 @@ export default function StorefrontPage() {
 
                         {!item.soldOut && (
                           <div className="flex flex-col items-end gap-2 shrink-0">
-                            {/* Preset Buttons */}
-                            <div className="flex gap-1">
-                              {item.presets?.map((preset: number) => (
-                                <button
-                                  key={preset}
-                                  type="button"
-                                  onClick={() => handleUpdateQty(item.itemId, preset, item)}
-                                  className={`rounded-xl px-2.5 py-1 text-xs font-bold transition shadow-sm ${
-                                    qty === preset
-                                      ? "bg-primary text-white scale-105"
-                                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                                  }`}
-                                >
-                                  {preset} {item.unit}
-                                </button>
-                              ))}
+                            {/* Package Size Variant Selector Pills */}
+                            <div className="flex gap-1 flex-wrap justify-end">
+                              {item.presets?.map((preset: number) => {
+                                const isPackActive = activePackSize === preset;
+                                return (
+                                  <button
+                                    key={preset}
+                                    type="button"
+                                    onClick={() => handleSelectPack(item.itemId, preset, item)}
+                                    className={`rounded-xl px-2.5 py-1 text-xs font-bold transition shadow-sm ${
+                                      isPackActive && isSelected
+                                        ? "bg-primary text-white scale-105"
+                                        : isPackActive
+                                        ? "bg-primary/20 text-primary border border-primary/30"
+                                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                    }`}
+                                  >
+                                    {preset} {item.unit}
+                                  </button>
+                                );
+                              })}
                             </div>
 
-                            {/* Stepper */}
+                            {/* Stepper for Pack Multiplier Count */}
                             <div className="flex items-center border border-input rounded-2xl bg-background shadow-inner">
                               <button
                                 type="button"
-                                onClick={() => handleUpdateQty(item.itemId, Math.max(0, qty - (item.presets?.[0] || 0.25)), item)}
-                                className="px-3 py-1.5 text-muted-foreground hover:text-foreground"
+                                onClick={() => handleUpdatePackCount(item.itemId, packCount - 1, item)}
+                                disabled={packCount === 0}
+                                className="px-3 py-1.5 text-muted-foreground hover:text-foreground disabled:opacity-40"
                               >
                                 <Minus className="h-3.5 w-3.5" />
                               </button>
-                              <input
-                                type="number"
-                                step={item.unit === "Kg" || item.unit === "Litre" ? "0.25" : "1"}
-                                min={item.minQty}
-                                max={item.maxQty}
-                                value={qty || ""}
-                                placeholder="0"
-                                onChange={(e) => handleUpdateQty(item.itemId, parseFloat(e.target.value) || 0, item)}
-                                className="w-12 text-center text-xs font-bold bg-transparent outline-none"
-                              />
+                              <span className="w-16 text-center text-xs font-bold text-foreground">
+                                {packCount > 0 ? `${packCount} ${packCount > 1 ? "Pks" : "Pk"}` : "0"}
+                              </span>
                               <button
                                 type="button"
-                                onClick={() => handleUpdateQty(item.itemId, qty + (item.presets?.[0] || 0.25), item)}
+                                onClick={() => handleUpdatePackCount(item.itemId, packCount + 1, item)}
                                 className="px-3 py-1.5 text-muted-foreground hover:text-foreground"
                               >
                                 <Plus className="h-3.5 w-3.5" />
                               </button>
                             </div>
+
+                            {packCount > 0 && (
+                              <div className="text-[11px] font-semibold text-emerald-800">
+                                {packCount} × {activePackSize} {item.unit} = {Math.round(packCount * activePackSize * 100) / 100} {item.unit}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1074,7 +1117,7 @@ export default function StorefrontPage() {
               <>
                 {/* Cart Lines */}
                 <div className="rounded-3xl bg-card p-4 sm:p-5 border shadow-sm divide-y">
-                  {cartLines.map(({ item, qty, lineTotal }) => (
+                  {cartLines.map(({ item, packSize, packCount, qty, lineTotal }) => (
                     <div key={item.itemId} className="py-3.5 flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
                         <GenericProduceImage
@@ -1086,9 +1129,12 @@ export default function StorefrontPage() {
                         <div>
                           <div className="font-bold text-sm sm:text-base text-foreground">{item.nameEn}</div>
                           <div className="text-xs text-muted-foreground font-tamil">{item.nameTa}</div>
+                          <div className="text-xs text-emerald-800 font-semibold mt-0.5">
+                            {packCount} {packCount > 1 ? "Packs" : "Pack"} × {packSize} {item.unit} ({qty} {item.unit})
+                          </div>
                           {lookup.branch.showPrices && (
                             <div className="text-xs text-primary font-bold mt-0.5">
-                              ₹{item.price} / {item.unit} • ₹{lineTotal.toFixed(2)}
+                              ₹{lineTotal.toFixed(2)}
                             </div>
                           )}
                         </div>
@@ -1098,15 +1144,17 @@ export default function StorefrontPage() {
                         <div className="flex items-center border rounded-xl bg-background shadow-inner">
                           <button
                             type="button"
-                            onClick={() => handleUpdateQty(item.itemId, qty - (item.presets?.[0] || 0.5), item)}
+                            onClick={() => handleUpdatePackCount(item.itemId, packCount - 1, item)}
                             className="px-2.5 py-1.5 text-muted-foreground hover:text-foreground"
                           >
                             <Minus className="h-3.5 w-3.5" />
                           </button>
-                          <span className="px-2.5 text-xs font-bold">{qty} {item.unit}</span>
+                          <span className="px-2.5 text-xs font-bold">
+                            {packCount} {packCount > 1 ? "Pks" : "Pk"}
+                          </span>
                           <button
                             type="button"
-                            onClick={() => handleUpdateQty(item.itemId, qty + (item.presets?.[0] || 0.5), item)}
+                            onClick={() => handleUpdatePackCount(item.itemId, packCount + 1, item)}
                             className="px-2.5 py-1.5 text-muted-foreground hover:text-foreground"
                           >
                             <Plus className="h-3.5 w-3.5" />
@@ -1115,7 +1163,7 @@ export default function StorefrontPage() {
 
                         <button
                           type="button"
-                          onClick={() => handleUpdateQty(item.itemId, 0, item)}
+                          onClick={() => handleUpdatePackCount(item.itemId, 0, item)}
                           className="text-muted-foreground hover:text-destructive p-1.5 rounded-lg hover:bg-destructive/10 transition"
                         >
                           <Trash2 className="h-4 w-4" />
