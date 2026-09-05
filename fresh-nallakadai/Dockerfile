@@ -19,6 +19,7 @@ RUN npm run build
 
 # Stage 3: Runner
 FROM node:22-alpine AS runner
+RUN apk add --no-cache su-exec libc6-compat
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -29,18 +30,17 @@ ENV HOSTNAME="0.0.0.0"
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Ensure data directory exists and is writable by nextjs user
-RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
+# Ensure data directory exists and is writable
+RUN mkdir -p /app/data/backups /app/data/uploads && chmod -R 777 /app/data
 
 COPY --from=builder /app/public ./public
-
-# Automatically leverage output traces to reduce image size
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/data ./data
+COPY entrypoint.sh ./entrypoint.sh
 
-USER nextjs
+RUN chmod +x ./entrypoint.sh
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+ENTRYPOINT ["./entrypoint.sh"]

@@ -151,6 +151,7 @@ export async function getStoreCatalogAction(rawPhone: string) {
             imageUrl: (item as any).image_url || null,
             unit: item.unit,
             presets: item.presets,
+            packOptions: (item as any).pack_options || [],
             minQty: ci?.min_qty ?? item.min_qty,
             maxQty: ci?.max_qty ?? item.max_qty,
             procurementCost: ci?.procurement_cost ?? item.procurement_cost,
@@ -190,10 +191,14 @@ export async function getStoreCatalogAction(rawPhone: string) {
             return {
               item_id: l.item_id,
               qty: l.qty,
+              pack_size: l.pack_size,
+              pack_count: l.pack_count,
+              pack_label: l.pack_label,
               name_en: master?.name_en || l.name_en,
               name_ta: master?.name_ta || l.name_ta,
               unit: master?.unit || l.unit,
               price: master ? master.price : l.price,
+              line_total: l.line_total,
             };
           }),
         }
@@ -202,15 +207,15 @@ export async function getStoreCatalogAction(rawPhone: string) {
       ? {
           id: previousOrder.id,
           orderNo: previousOrder.order_no,
-          couponCode: (previousOrder as any).coupon_code || null,
-          discountAmount: (previousOrder as any).discount_amount || 0,
-          order_items: (previousOrder.lines || []).map((l: any) => ({
+          deliveryMode: previousOrder.delivery_mode,
+          deliveryAddress: previousOrder.delivery_address,
+          lines: (previousOrder.lines || []).map((l: any) => ({
             item_id: l.item_id,
             qty: l.qty,
+            pack_size: l.pack_size,
+            pack_count: l.pack_count,
             name_en: l.name_en,
-            name_ta: l.name_ta,
             unit: l.unit,
-            price: l.price,
           })),
         }
       : null,
@@ -269,7 +274,15 @@ export async function submitCustomerOrderAction(data: {
   note?: string;
   couponCode?: string;
   discountAmount?: number;
-  lines: { itemId: string; packSize?: number; packCount?: number; qty?: number; lineTotal?: number }[];
+  lines: { 
+    itemId: string; 
+    packSize?: number; 
+    packCount?: number; 
+    packLabel?: string; 
+    packPrice?: number; 
+    qty?: number; 
+    lineTotal?: number 
+  }[];
 }) {
   const mobile = normaliseMobile(data.mobile);
   const store = getLocalStore();
@@ -297,16 +310,22 @@ export async function submitCustomerOrderAction(data: {
       const packSize = Number(l.packSize || item.presets?.[0] || l.qty || 1);
       const packCount = Number(l.packCount || 1);
       const totalQty = Number(l.qty !== undefined ? l.qty : packCount * packSize);
+      const packLabel = l.packLabel || `${packSize} ${item.unit}`;
+      const packPrice = l.packPrice !== undefined ? l.packPrice : (item.price || 0);
+      const lineTotal = l.lineTotal !== undefined ? l.lineTotal : (packCount * packPrice);
+
       return {
         item_id: item.id,
         name_en: item.name_en,
         name_ta: item.name_ta,
         unit: item.unit,
+        pack_label: packLabel,
         pack_size: packSize,
         pack_count: packCount,
+        pack_price: packPrice,
         qty: totalQty,
         price: item.price,
-        line_total: l.lineTotal !== undefined ? l.lineTotal : totalQty * item.price,
+        line_total: lineTotal,
       };
     });
 

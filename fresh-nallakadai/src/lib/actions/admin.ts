@@ -14,6 +14,7 @@ import {
   restoreFromBackupFile,
   getStorageDiagnostics,
   getUploadsDirectory,
+  parsePackOptionsInput,
 } from "@/lib/data-store";
 
 /**
@@ -652,13 +653,14 @@ export async function getOrderSheetsAction(cycleId: string) {
       lines: (o.lines || []).map((l: any) => {
         const masterItem = store.items.find((i) => i.id === l.item_id);
         const price = masterItem ? masterItem.price : Number(l.price);
-        const unit = masterItem?.unit || l.unit;
+        const unit = masterItem?.unit || l.unit || "Kg";
         const packCount = Number(l.pack_count || 1);
         const packSize = Number(l.pack_size || l.qty);
         const totalQty = Number(l.qty);
+        const packLabel = l.pack_label || `${packSize} ${unit}`;
         const displayQty = packCount > 1
-          ? `${packCount} × ${packSize} ${unit} (${totalQty} ${unit})`
-          : `${totalQty} ${unit}`;
+          ? `${packCount} × ${packLabel} (${totalQty} ${unit})`
+          : packLabel;
 
         return {
           nameEn: masterItem?.name_en || l.name_en,
@@ -666,6 +668,7 @@ export async function getOrderSheetsAction(cycleId: string) {
           qty: totalQty,
           packSize,
           packCount,
+          packLabel,
           displayQty,
           unit,
           price,
@@ -837,6 +840,13 @@ export async function saveMasterItemAction(
   const discountPercent = Number(itemData.discountPercent || itemData.discount_percent || 0);
   const netPrice = Math.round((sellingPrice - (sellingPrice * discountPercent) / 100) * 100) / 100;
 
+  const packOptions = parsePackOptionsInput(
+    itemData.packOptions || itemData.pack_options || itemData.presets,
+    netPrice,
+    itemData.unit || "Kg"
+  );
+  const presets = packOptions.map((o) => o.qty);
+
   let itemId = itemData.id;
 
   if (itemId) {
@@ -850,7 +860,8 @@ export async function saveMasterItemAction(
         brand_id: itemData.brandId || null,
         image_url: itemData.imageUrl || null,
         unit: itemData.unit,
-        presets: itemData.presets,
+        presets,
+        pack_options: packOptions,
         min_qty: itemData.minQty,
         max_qty: itemData.maxQty,
         procurement_cost: procurementCost,
@@ -870,7 +881,8 @@ export async function saveMasterItemAction(
       brand_id: itemData.brandId || null,
       image_url: itemData.imageUrl || null,
       unit: itemData.unit,
-      presets: itemData.presets,
+      presets,
+      pack_options: packOptions,
       min_qty: itemData.minQty,
       max_qty: itemData.maxQty,
       procurement_cost: procurementCost,
@@ -899,7 +911,7 @@ export async function saveMasterItemAction(
           selling_price: sellingPrice,
           discount_percent: discountPercent,
           cap_qty: null,
-          min_qty: itemData.minQty || itemData.presets?.[0] || 0.5,
+          min_qty: itemData.minQty || presets[0] || 0.5,
           max_qty: itemData.maxQty || 10,
         });
       }
@@ -1019,50 +1031,39 @@ export async function bulkSaveMasterItemsAction(
       if (foundBrand) brandId = foundBrand.id;
     }
 
-    // 3. Resolve Presets (Pack sizes)
-    let presets: number[] = [];
-    if (Array.isArray(raw.presets)) {
-      presets = raw.presets.map((n: any) => Number(n)).filter((n: number) => !isNaN(n) && n > 0);
-    } else if (typeof raw.presets === "string" || typeof raw.packSizes === "string") {
-      const str = String(raw.presets || raw.packSizes || "");
-      presets = str
-        .split(/[,\/|]/)
-        .map((s) => parseFloat(s.trim()))
-        .filter((n) => !isNaN(n) && n > 0);
-    }
-    if (presets.length === 0) {
-      presets = unit.toLowerCase() === "gram" ? [100, 250, 500] : unit.toLowerCase() === "nos" ? [1, 2, 5] : [0.5, 1, 2];
-    }
-
-    // 4. Resolve Min / Max Qty
-    const minQty = Number(raw.minQty || raw.min_qty || presets[0] || 1);
-    const maxQty = Number(raw.maxQty || raw.max_qty || 25);
-
-    // 5. Resolve Pricing
+    // 3. Resolve Pricing
     const sellingPrice = Number(raw.sellingPrice || raw.selling_price || raw.mrp || raw.price || 50);
     const procurementCost = Number(raw.procurementCost || raw.procurement_cost || raw.buyingCost || raw.cost || Math.round(sellingPrice * 0.7));
     const discountPercent = Number(raw.discountPercent || raw.discount_percent || raw.discount || 0);
     const netPrice = Math.round((sellingPrice - (sellingPrice * discountPercent) / 100) * 100) / 100;
     const active = raw.active !== undefined ? Boolean(raw.active) : true;
 
+    // 4. Resolve Presets & Pack Options (supports "2 nos:25 | 5 nos:55 | 10 nos:100" or "0.25, 0.5, 1")
+    const rawPackInput = raw.packOptions || raw.pack_options || raw.packSizes || raw.presets || raw.pack_sizes || "";
+    const packOptions = parsePackOptionsInput(rawPackInput, netPrice, unit);
+    const presets = packOptions.map((o) => o.qty);
+
+    const minQty = Number(raw.minQty || raw.min_qty || presets[0] || 1);
+    const maxQty = Number(raw.maxQty || raw.max_qty || 25);
+
     // Check existing item by ID or Name
     const existingIdx = store.items.findIndex(
       (i) => (raw.id && i.id === raw.id) || i.name_en.toLowerCase() === nameEn.toLowerCase()
     );
 
-    let finalItemId = "";
+    let savedItemId: string;
 
     if (existingIdx >= 0) {
-      finalItemId = store.items[existingIdx].id;
+      savedItemId = store.items[existingIdx].id;
       store.items[existingIdx] = {
         ...store.items[existingIdx],
         name_en: nameEn,
         name_ta: nameTa || store.items[existingIdx].name_ta,
         category_id: categoryId,
-        brand_id: brandId !== undefined ? brandId : store.items[existingIdx].brand_id,
-        image_url: raw.imageUrl || raw.image_url || store.items[existingIdx].image_url || null,
+        brand_id: brandId || store.items[existingIdx].brand_id,
         unit,
         presets,
+        pack_options: packOptions,
         min_qty: minQty,
         max_qty: maxQty,
         procurement_cost: procurementCost,
@@ -1073,16 +1074,17 @@ export async function bulkSaveMasterItemsAction(
       };
       updatedCount++;
     } else {
-      finalItemId = crypto.randomUUID();
+      savedItemId = crypto.randomUUID();
       store.items.push({
-        id: finalItemId,
+        id: savedItemId,
         name_en: nameEn,
         name_ta: nameTa,
         category_id: categoryId,
         brand_id: brandId,
-        image_url: raw.imageUrl || raw.image_url || null,
+        image_url: null,
         unit,
         presets,
+        pack_options: packOptions,
         min_qty: minQty,
         max_qty: maxQty,
         procurement_cost: procurementCost,
@@ -1094,10 +1096,10 @@ export async function bulkSaveMasterItemsAction(
       addedCount++;
     }
 
-    // Auto-Attach or Synchronize with all currently Open Harvest Cycles
+    // Auto-Attach to Open Harvest Cycles
     for (const cy of store.cycles) {
       if (cy.status === "Open") {
-        const existingCi = store.cycle_items.find((ci) => ci.cycle_id === cy.id && ci.item_id === finalItemId);
+        const existingCi = store.cycle_items.find((ci) => ci.cycle_id === cy.id && ci.item_id === savedItemId);
         if (existingCi) {
           existingCi.price = netPrice;
           existingCi.procurement_cost = procurementCost;
@@ -1106,7 +1108,7 @@ export async function bulkSaveMasterItemsAction(
         } else {
           store.cycle_items.push({
             cycle_id: cy.id,
-            item_id: finalItemId,
+            item_id: savedItemId,
             price: netPrice,
             procurement_cost: procurementCost,
             selling_price: sellingPrice,
