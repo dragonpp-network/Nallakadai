@@ -136,7 +136,19 @@ export default function AdminItemsPage() {
     setBrandId(item.brand_id || "");
     setImageUrl(item.image_url || null);
     setUnit(item.unit);
-    setPresetsStr((item.presets || []).join(", "));
+    if (item.pack_options && item.pack_options.length > 0) {
+      const hasCustomPrice = item.pack_options.some((o: any) => {
+        const defaultRate = Math.round((item.price || item.selling_price || 0) * o.qty * 100) / 100;
+        return o.price !== undefined && Math.abs(o.price - defaultRate) > 0.01;
+      });
+      if (hasCustomPrice) {
+        setPresetsStr(item.pack_options.map((o: any) => `${o.label}:${o.price}`).join(" | "));
+      } else {
+        setPresetsStr(item.pack_options.map((o: any) => o.label).join(", "));
+      }
+    } else {
+      setPresetsStr((item.presets || []).join(", "));
+    }
     setMinQty(Number(item.min_qty !== undefined ? item.min_qty : (item.presets?.[0] || 0.5)));
     setMaxQty(Number(item.max_qty || 10));
     setProcurementCost(Number(item.procurement_cost !== undefined ? item.procurement_cost : Math.round((item.price || 50) * 0.7)));
@@ -149,11 +161,6 @@ export default function AdminItemsPage() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     try {
-      const presets = presetsStr
-        .split(",")
-        .map((s) => parseFloat(s.trim()))
-        .filter((n) => !isNaN(n) && n > 0);
-
       await saveMasterItemAction("a0000000-0000-4000-8000-000000000001", {
         id: editingItem?.id,
         nameEn,
@@ -162,8 +169,8 @@ export default function AdminItemsPage() {
         brandId: brandId || null,
         imageUrl,
         unit,
-        presets: presets.length > 0 ? presets : [0.5, 1, 2],
-        minQty: Number(minQty || presets[0] || 1),
+        presets: presetsStr,
+        minQty: Number(minQty || 0.5),
         maxQty: Number(maxQty || 10),
         procurementCost: Number(procurementCost),
         sellingPrice: Number(sellingPrice),
@@ -187,12 +194,26 @@ export default function AdminItemsPage() {
         NameTa: "நாட்டுத் தக்காளி",
         Category: "Vegetables",
         Unit: "Kg",
-        Presets: "0.5, 1, 2",
-        MinQty: 0.5,
+        Presets: "250g, 500g, 1kg",
+        MinQty: 0.25,
         MaxQty: 10,
-        ProcurementCost: 25,
-        MRP: 45,
-        DiscountPercent: 10,
+        ProcurementCost: 50,
+        MRP: 80,
+        DiscountPercent: 0,
+        Brand: "Direct Farm",
+        Active: "TRUE",
+      },
+      {
+        NameEn: "Country Drumstick",
+        NameTa: "நாட்டு முருங்கைக்காய்",
+        Category: "Vegetables",
+        Unit: "Nos",
+        Presets: "2 nos:25 | 5 nos:55 | 10 nos:100",
+        MinQty: 2,
+        MaxQty: 25,
+        ProcurementCost: 20,
+        MRP: 35,
+        DiscountPercent: 0,
         Brand: "Direct Farm",
         Active: "TRUE",
       },
@@ -206,20 +227,6 @@ export default function AdminItemsPage() {
         MaxQty: 1000,
         ProcurementCost: 15,
         MRP: 25,
-        DiscountPercent: 0,
-        Brand: "Direct Farm",
-        Active: "TRUE",
-      },
-      {
-        NameEn: "Country Drumstick",
-        NameTa: "நாட்டு முருங்கைக்காய்",
-        Category: "Vegetables",
-        Unit: "Nos",
-        Presets: "2, 5, 10",
-        MinQty: 2,
-        MaxQty: 25,
-        ProcurementCost: 20,
-        MRP: 35,
         DiscountPercent: 0,
         Brand: "Direct Farm",
         Active: "TRUE",
@@ -567,6 +574,16 @@ export default function AdminItemsPage() {
               <span className="hidden sm:inline">Table</span>
             </button>
           </div>
+
+          {selectedIds.length > 0 && (
+            <Button
+              onClick={() => setDeleteConfirmOpen(true)}
+              variant="destructive"
+              className="rounded-2xl text-xs gap-1.5 shadow font-bold bg-red-600 hover:bg-red-700 text-white animate-in fade-in"
+            >
+              <Trash2 className="h-4 w-4" /> Delete Selected ({selectedIds.length})
+            </Button>
+          )}
 
           <Button onClick={() => openCreateModal()} className="rounded-2xl bg-primary text-white text-xs gap-1.5 shadow font-bold">
             <Plus className="h-4 w-4" /> Add Item
@@ -1319,13 +1336,16 @@ export default function AdminItemsPage() {
               </div>
 
               <div>
-                <Label className="text-xs font-semibold">Pack Sizes / Presets (csv)</Label>
+                <Label className="text-xs font-semibold">Packaging Options / Presets</Label>
                 <Input
                   value={presetsStr}
                   onChange={(e) => setPresetsStr(e.target.value)}
-                  placeholder="0.5, 1, 2"
+                  placeholder="e.g. 250g, 500g, 1kg OR 2 nos:25 | 5 nos:55 | 10 nos:100"
                   className="mt-1 rounded-xl text-sm"
                 />
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  <strong>Mode 1 (Standard):</strong> <code>250g, 500g, 1kg</code> | <strong>Mode 2 (Tiered Packs):</strong> <code>2 nos:25 | 5 nos:55 | 10 nos:100</code>
+                </p>
               </div>
             </div>
 

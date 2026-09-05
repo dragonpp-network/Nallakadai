@@ -342,6 +342,15 @@ export default function AdminCategoriesPage() {
           >
             <Upload className="h-4 w-4" /> Bulk Import
           </Button>
+          {selectedIds.length > 0 && (
+            <Button
+              onClick={() => setDeleteConfirmOpen(true)}
+              variant="destructive"
+              className="rounded-xl text-xs gap-1.5 shadow font-bold bg-red-600 hover:bg-red-700 text-white animate-in fade-in"
+            >
+              <Trash2 className="h-4 w-4" /> Delete Selected ({selectedIds.length})
+            </Button>
+          )}
           <Button onClick={openCreateModal} className="rounded-xl bg-primary text-white text-xs gap-1.5 shadow font-bold">
             <Plus className="h-4 w-4" /> Add Category
           </Button>

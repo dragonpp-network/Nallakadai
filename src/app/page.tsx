@@ -202,10 +202,20 @@ export default function StorefrontPage() {
       const itemId = line.item_id || line.itemId;
       const item = availMap.get(itemId);
       if (item && !item.soldOut) {
-        const packSize = Number(line.pack_size || line.packSize || item.presets?.[0] || line.qty || 1);
+        const packOptions = (item.packOptions && item.packOptions.length > 0)
+          ? item.packOptions
+          : (item.presets || [1]).map((p: number) => ({
+              label: `${p} ${item.unit}`,
+              qty: p,
+              price: item.price * p,
+            }));
+        const packSize = Number(line.pack_size || line.packSize || packOptions[0]?.qty || line.qty || 1);
+        const matchingOpt = packOptions.find((o: any) => o.qty === packSize) || packOptions[0];
+        const packPrice = Number(line.pack_price || matchingOpt?.price || item.price * packSize);
+        const packLabel = line.pack_label || matchingOpt?.label || `${packSize} ${item.unit}`;
         const totalQ = Number(line.qty || packSize);
         const packCount = Number(line.pack_count || line.packCount || Math.max(1, Math.round(totalQ / packSize)));
-        newCart[itemId] = { packSize, packCount };
+        newCart[itemId] = { packSize, packPrice, packLabel, packCount };
       } else {
         droppedItems.push(line.name_en || "Item");
       }
@@ -217,7 +227,7 @@ export default function StorefrontPage() {
     }
 
     setCart(newCart);
-    setEditingOrderNo(null); // Fresh cart from repeat
+    setEditingOrderNo(null);
     if (order.delivery_mode || order.deliveryMode) {
       setDeliveryMode(order.delivery_mode || order.deliveryMode);
     }
@@ -238,14 +248,24 @@ export default function StorefrontPage() {
     if (!target) return;
 
     const lines = target.order_items || target.lines || [];
-    const existing: Record<string, { packSize: number; packCount: number }> = {};
+    const existing: Record<string, { packSize: number; packPrice: number; packLabel: string; packCount: number }> = {};
     for (const item of lines) {
       const id = item.item_id || item.itemId || item.id;
       const meta = storeData?.items?.find((i: any) => i.itemId === id);
-      const packSize = Number(item.pack_size || item.packSize || meta?.presets?.[0] || item.qty || 1);
+      const packOptions = (meta?.packOptions && meta.packOptions.length > 0)
+        ? meta.packOptions
+        : (meta?.presets || [1]).map((p: number) => ({
+            label: `${p} ${meta?.unit || "Kg"}`,
+            qty: p,
+            price: (meta?.price || 0) * p,
+          }));
+      const packSize = Number(item.pack_size || item.packSize || packOptions[0]?.qty || item.qty || 1);
+      const matchingOpt = packOptions.find((o: any) => o.qty === packSize) || packOptions[0];
+      const packPrice = Number(item.pack_price || matchingOpt?.price || (meta?.price || 0) * packSize);
+      const packLabel = item.pack_label || matchingOpt?.label || `${packSize} ${meta?.unit || ""}`;
       const totalQ = Number(item.qty || packSize);
       const packCount = Number(item.pack_count || item.packCount || Math.max(1, Math.round(totalQ / packSize)));
-      existing[id] = { packSize, packCount };
+      existing[id] = { packSize, packPrice, packLabel, packCount };
     }
 
     setCart(existing);
@@ -258,29 +278,59 @@ export default function StorefrontPage() {
     toast.info(`Loaded Order ${target.order_no || target.orderNo} into Cart. You can adjust items and tap Update.`);
   }
 
-  function handleSelectPack(itemId: string, packSize: number, itemMeta: any) {
-    setCart((prev) => {
+  function handleSelectPack(itemId: string, packOptionOrSize: any, itemMeta: any) {
+    setCart((prev: any) => {
       const existing = prev[itemId];
       const packCount = existing && existing.packCount > 0 ? existing.packCount : 1;
+      
+      let packSize: number;
+      let packPrice: number;
+      let packLabel: string;
+
+      if (typeof packOptionOrSize === "object" && packOptionOrSize !== null) {
+        packSize = Number(packOptionOrSize.qty || 1);
+        packPrice = Number(packOptionOrSize.price || itemMeta.price * packSize);
+        packLabel = packOptionOrSize.label || `${packSize} ${itemMeta.unit}`;
+      } else {
+        packSize = Number(packOptionOrSize);
+        const packOptions = itemMeta.packOptions || [];
+        const match = packOptions.find((o: any) => o.qty === packSize);
+        packPrice = match ? match.price : (itemMeta.price * packSize);
+        packLabel = match ? match.label : `${packSize} ${itemMeta.unit}`;
+      }
+
       return {
         ...prev,
-        [itemId]: { packSize, packCount },
+        [itemId]: { packSize, packPrice, packLabel, packCount },
       };
     });
   }
 
   function handleUpdatePackCount(itemId: string, packCount: number, itemMeta: any) {
-    setCart((prev) => {
+    setCart((prev: any) => {
       if (packCount <= 0) {
         const copy = { ...prev };
         delete copy[itemId];
         return copy;
       }
       const existing = prev[itemId];
-      const packSize = existing?.packSize !== undefined ? existing.packSize : (itemMeta.presets?.[0] || 1);
+      const packOptions = (itemMeta.packOptions && itemMeta.packOptions.length > 0)
+        ? itemMeta.packOptions
+        : (itemMeta.presets || [1]).map((p: number) => ({
+            label: `${p} ${itemMeta.unit}`,
+            qty: p,
+            price: itemMeta.price * p,
+          }));
+      const firstOpt = packOptions[0];
+
       return {
         ...prev,
-        [itemId]: { packSize, packCount },
+        [itemId]: {
+          packSize: existing?.packSize !== undefined ? existing.packSize : firstOpt.qty,
+          packPrice: existing?.packPrice !== undefined ? existing.packPrice : firstOpt.price,
+          packLabel: existing?.packLabel || firstOpt.label,
+          packCount,
+        },
       };
     });
   }
@@ -296,35 +346,37 @@ export default function StorefrontPage() {
   const cartLines = useMemo(() => {
     if (!storeData?.items) return [];
     return Object.entries(cart)
-      .map(([itemId, entry]) => {
+      .map(([itemId, entry]: [string, any]) => {
         const item = storeData.items.find((i: any) => i.itemId === itemId);
         if (!item || !entry || !entry.packCount || entry.packCount <= 0) return null;
-        const packSize = Number(entry.packSize !== undefined ? entry.packSize : (item.presets?.[0] || 1));
+
+        const packOptions = (item.packOptions && item.packOptions.length > 0)
+          ? item.packOptions
+          : (item.presets || [1]).map((p: number) => ({
+              label: `${p} ${item.unit}`,
+              qty: p,
+              price: item.price * p,
+            }));
+
+        const matchingOption = packOptions.find((o: any) => o.qty === entry.packSize) || packOptions[0];
+        const packSize = Number(entry.packSize !== undefined ? entry.packSize : matchingOption.qty);
+        const packPrice = Number(entry.packPrice !== undefined ? entry.packPrice : matchingOption.price);
+        const packLabel = entry.packLabel || matchingOption.label || `${packSize} ${item.unit}`;
         const packCount = Number(entry.packCount || 1);
         const totalQty = Math.round(packCount * packSize * 100) / 100;
-
-        let lineTotal = 0;
-        const price = Number(item.price || 0);
-        if (item.unit === "Gram") {
-          if (price >= 1) {
-            lineTotal = (totalQty / 1000) * price;
-          } else {
-            lineTotal = totalQty * price;
-          }
-        } else {
-          lineTotal = totalQty * price;
-        }
-        lineTotal = Math.round(lineTotal * 100) / 100;
+        const lineTotal = Math.round(packCount * packPrice * 100) / 100;
 
         return {
           item,
           packSize,
+          packPrice,
+          packLabel,
           packCount,
           qty: totalQty,
           lineTotal,
         };
       })
-      .filter(Boolean) as { item: any; packSize: number; packCount: number; qty: number; lineTotal: number }[];
+      .filter(Boolean) as any[];
   }, [cart, storeData]);
 
   const subtotalAmount = cartLines.reduce((sum, l) => sum + l.lineTotal, 0);
@@ -409,6 +461,8 @@ export default function StorefrontPage() {
           itemId: l.item.itemId,
           packSize: l.packSize,
           packCount: l.packCount,
+          packLabel: l.packLabel,
+          packPrice: l.packPrice,
           qty: l.qty,
           lineTotal: l.lineTotal,
         })),
@@ -920,8 +974,19 @@ export default function StorefrontPage() {
             ) : (
               <div className="space-y-3">
                 {filteredItems.map((item: any) => {
-                  const entry = cart[item.itemId];
-                  const activePackSize = entry?.packSize !== undefined ? entry.packSize : (item.presets?.[0] || 1);
+                  const packOptions: any[] = (item.packOptions && item.packOptions.length > 0)
+                    ? item.packOptions
+                    : (item.presets || [1]).map((p: number) => ({
+                        label: `${p} ${item.unit}`,
+                        qty: p,
+                        price: Math.round(item.price * p * 100) / 100,
+                      }));
+
+                  const defaultOpt = packOptions[0];
+                  const activeOption = packOptions.find((opt) => opt.qty === entry?.packSize) || defaultOpt;
+                  const activePackSize = activeOption?.qty ?? (item.presets?.[0] || 1);
+                  const activePackPrice = entry?.packPrice !== undefined ? entry.packPrice : (activeOption?.price ?? (item.price * activePackSize));
+                  const activePackLabel = entry?.packLabel || activeOption?.label || `${activePackSize} ${item.unit}`;
                   const packCount = entry?.packCount || 0;
                   const isSelected = packCount > 0;
                   return (
@@ -975,15 +1040,15 @@ export default function StorefrontPage() {
                         {!item.soldOut && (
                           <div className="flex flex-col items-end gap-2 shrink-0">
                             {/* Package Size Variant Selector Pills */}
-                            <div className="flex gap-1 flex-wrap justify-end">
-                              {item.presets?.map((preset: number) => {
-                                const isPackActive = activePackSize === preset;
+                            <div className="flex gap-1.5 flex-wrap justify-end max-w-[260px]">
+                              {packOptions.map((opt: any) => {
+                                const isPackActive = activePackSize === opt.qty;
                                 return (
                                   <button
-                                    key={preset}
+                                    key={opt.label || opt.qty}
                                     type="button"
-                                    onClick={() => handleSelectPack(item.itemId, preset, item)}
-                                    className={`rounded-xl px-2.5 py-1 text-xs font-bold transition shadow-sm ${
+                                    onClick={() => handleSelectPack(item.itemId, opt, item)}
+                                    className={`relative rounded-xl px-2.5 py-1 text-xs font-bold transition shadow-sm flex flex-col items-center ${
                                       isPackActive && isSelected
                                         ? "bg-primary text-white scale-105"
                                         : isPackActive
@@ -991,7 +1056,17 @@ export default function StorefrontPage() {
                                         : "bg-muted text-muted-foreground hover:bg-muted/80"
                                     }`}
                                   >
-                                    {preset} {item.unit}
+                                    <span className="whitespace-nowrap">{opt.label}</span>
+                                    {lookup.branch.showPrices && opt.price !== undefined && (
+                                      <span className={`text-[10px] font-mono ${isPackActive && isSelected ? "text-primary-foreground/90" : "text-foreground/80"}`}>
+                                        ₹{opt.price}
+                                      </span>
+                                    )}
+                                    {opt.savingsText && (
+                                      <span className="absolute -top-2 -right-1 bg-amber-500 text-white text-[8px] font-extrabold px-1 rounded-full shadow-xs whitespace-nowrap">
+                                        {opt.savingsText}
+                                      </span>
+                                    )}
                                   </button>
                                 );
                               })}
@@ -1020,8 +1095,9 @@ export default function StorefrontPage() {
                             </div>
 
                             {packCount > 0 && (
-                              <div className="text-[11px] font-semibold text-emerald-800">
-                                {packCount} × {activePackSize} {item.unit} = {Math.round(packCount * activePackSize * 100) / 100} {item.unit}
+                              <div className="text-[11px] font-semibold text-emerald-800 text-right">
+                                {packCount} × {activePackLabel}
+                                {lookup.branch.showPrices && ` (₹${activePackPrice}) = ₹${Math.round(packCount * activePackPrice * 100) / 100}`}
                               </div>
                             )}
                           </div>
@@ -1117,7 +1193,7 @@ export default function StorefrontPage() {
               <>
                 {/* Cart Lines */}
                 <div className="rounded-3xl bg-card p-4 sm:p-5 border shadow-sm divide-y">
-                  {cartLines.map(({ item, packSize, packCount, qty, lineTotal }) => (
+                  {cartLines.map(({ item, packSize, packPrice, packLabel, packCount, qty, lineTotal }) => (
                     <div key={item.itemId} className="py-3.5 flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
                         <GenericProduceImage
@@ -1130,11 +1206,12 @@ export default function StorefrontPage() {
                           <div className="font-bold text-sm sm:text-base text-foreground">{item.nameEn}</div>
                           <div className="text-xs text-muted-foreground font-tamil">{item.nameTa}</div>
                           <div className="text-xs text-emerald-800 font-semibold mt-0.5">
-                            {packCount} {packCount > 1 ? "Packs" : "Pack"} × {packSize} {item.unit} ({qty} {item.unit})
+                            {packCount} {packCount > 1 ? "Packs" : "Pack"} × {packLabel}
+                            {qty !== packCount && ` (${qty} ${item.unit})`}
                           </div>
                           {lookup.branch.showPrices && (
                             <div className="text-xs text-primary font-bold mt-0.5">
-                              ₹{lineTotal.toFixed(2)}
+                              ₹{lineTotal.toFixed(2)} {packCount > 1 && `(₹${packPrice} / pk)`}
                             </div>
                           )}
                         </div>

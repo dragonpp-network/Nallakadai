@@ -12,11 +12,20 @@ import {
   INITIAL_ORDERS,
 } from "./mock-data";
 
+export interface PackOption {
+  label: string;
+  qty: number;
+  price: number;
+  savingsText?: string | null;
+}
+
 export interface StoreState {
   branches: typeof INITIAL_BRANCHES;
   brands: typeof INITIAL_BRANDS;
   categories: typeof INITIAL_CATEGORIES;
-  items: typeof INITIAL_ITEMS;
+  items: (typeof INITIAL_ITEMS[0] & {
+    pack_options?: PackOption[];
+  })[];
   coupons: typeof INITIAL_COUPONS;
   customers: typeof INITIAL_CUSTOMERS;
   cycles: (typeof INITIAL_CYCLE)[];
@@ -42,6 +51,149 @@ export interface StoreState {
     active: boolean;
   }[];
   audit_logs: any[];
+}
+
+export function calculateDefaultPackPrice(qty: number, basePrice: number, unit: string): number {
+  const u = (unit || "Kg").toLowerCase();
+  if (u === "gram" || u === "gm" || u === "g") {
+    // If unit was gram and price is per kg, 250g of 80/kg is (250/1000)*80 = 20
+    const grams = qty >= 10 ? qty : qty * 1000;
+    return Math.round(((grams / 1000) * basePrice) * 100) / 100;
+  }
+  if (u === "ml") {
+    const ml = qty >= 10 ? qty : qty * 1000;
+    return Math.round(((ml / 1000) * basePrice) * 100) / 100;
+  }
+  return Math.round((qty * basePrice) * 100) / 100;
+}
+
+export function formatPackLabel(qty: number, unit: string, originalStr?: string): string {
+  const u = unit || "Kg";
+  if (originalStr && originalStr.trim()) {
+    const s = originalStr.trim();
+    if (s.toLowerCase().includes("pack") || s.toLowerCase().includes("nos") || s.toLowerCase().includes("kg") || s.toLowerCase().includes("gm") || s.toLowerCase().includes("ml") || s.toLowerCase().includes("litre")) {
+      return s;
+    }
+  }
+  if (u === "Kg") {
+    if (qty < 1) return `${Math.round(qty * 1000)} gm`;
+    return `${qty} Kg`;
+  }
+  if (u === "Litre" || u === "L") {
+    if (qty < 1) return `${Math.round(qty * 1000)} ml`;
+    return `${qty} Litre`;
+  }
+  if (u === "Gram") {
+    if (qty >= 1000) return `${qty / 1000} Kg`;
+    return `${qty} gm`;
+  }
+  if (u === "Nos") {
+    return `${qty} Nos`;
+  }
+  return `${qty} ${u}`;
+}
+
+export function parseQuantityFromString(str: string, baseUnit: string): number {
+  const s = str.trim().toLowerCase();
+  if (s.endsWith("gm") || s.endsWith("gram") || s.endsWith("g")) {
+    const num = parseFloat(s.replace(/[^0-9.]/g, ""));
+    if (isNaN(num)) return 0;
+    const bu = (baseUnit || "Kg").toLowerCase();
+    if (bu === "kg") return num >= 10 ? num / 1000 : num;
+    return num;
+  }
+  if (s.endsWith("ml")) {
+    const num = parseFloat(s.replace(/[^0-9.]/g, ""));
+    if (isNaN(num)) return 0;
+    const bu = (baseUnit || "Litre").toLowerCase();
+    if (bu === "litre" || bu === "l") return num >= 10 ? num / 1000 : num;
+    return num;
+  }
+  if (s.endsWith("kg")) {
+    const num = parseFloat(s.replace(/[^0-9.]/g, ""));
+    return isNaN(num) ? 0 : num;
+  }
+  const num = parseFloat(s.replace(/[^0-9.]/g, ""));
+  return isNaN(num) ? 0 : num;
+}
+
+export function parsePackOptionsInput(
+  rawInput: any,
+  basePrice: number,
+  unit: string
+): PackOption[] {
+  if (!rawInput) return [];
+
+  // Array of objects
+  if (Array.isArray(rawInput) && rawInput.length > 0 && typeof rawInput[0] === "object") {
+    return rawInput.map((opt) => {
+      const qty = Number(opt.qty || 1);
+      const standardPrice = calculateDefaultPackPrice(qty, basePrice, unit);
+      const price = opt.price !== undefined && Number(opt.price) > 0 ? Number(opt.price) : standardPrice;
+      const savings = standardPrice > price ? standardPrice - price : 0;
+      const savingsText = savings > 0 ? `Save ₹${Math.round(savings * 100) / 100}` : (opt.savingsText || null);
+      return {
+        label: opt.label || formatPackLabel(qty, unit),
+        qty,
+        price,
+        savingsText,
+      };
+    });
+  }
+
+  // Array of numbers, e.g. [0.5, 1, 2]
+  if (Array.isArray(rawInput) && rawInput.length > 0 && typeof rawInput[0] === "number") {
+    return rawInput.map((qty) => {
+      const price = calculateDefaultPackPrice(qty, basePrice, unit);
+      return {
+        label: formatPackLabel(qty, unit),
+        qty,
+        price,
+      };
+    });
+  }
+
+  // String format e.g. "2 nos:25 | 5 nos:55 | 10 nos:100" OR "0.25, 0.5, 1"
+  const str = String(rawInput).trim();
+  if (!str) return [];
+
+  const parts = str.includes("|") ? str.split("|") : str.split(",");
+  const options: PackOption[] = [];
+
+  for (const p of parts) {
+    const trimmed = p.trim();
+    if (!trimmed) continue;
+
+    if (trimmed.includes(":")) {
+      const [qtyPart, pricePart] = trimmed.split(":");
+      const cleanQty = parseQuantityFromString(qtyPart, unit);
+      const customPrice = parseFloat(pricePart.trim());
+      if (cleanQty > 0 && !isNaN(customPrice)) {
+        const standardPrice = calculateDefaultPackPrice(cleanQty, basePrice, unit);
+        const savings = standardPrice > customPrice ? standardPrice - customPrice : 0;
+        const savingsText = savings > 0 ? `Save ₹${Math.round(savings * 100) / 100}` : undefined;
+        options.push({
+          label: formatPackLabel(cleanQty, unit, qtyPart),
+          qty: cleanQty,
+          price: customPrice,
+          savingsText,
+        });
+        continue;
+      }
+    }
+
+    const qty = parseQuantityFromString(trimmed, unit);
+    if (qty > 0) {
+      const price = calculateDefaultPackPrice(qty, basePrice, unit);
+      options.push({
+        label: formatPackLabel(qty, unit, trimmed),
+        qty,
+        price,
+      });
+    }
+  }
+
+  return options;
 }
 
 // Global In-Memory Singleton Cache
@@ -385,6 +537,9 @@ export function getLocalStore(): StoreState {
       if (item.procurement_cost === undefined) item.procurement_cost = Math.round((item.price || 50) * 0.7);
       if (item.selling_price === undefined) item.selling_price = item.price || 50;
       if (item.discount_percent === undefined) item.discount_percent = 0;
+      if (!item.pack_options || !Array.isArray(item.pack_options) || item.pack_options.length === 0) {
+        item.pack_options = parsePackOptionsInput(item.presets, item.price, item.unit);
+      }
     }
 
     // Sanitize any duplicate IDs automatically
