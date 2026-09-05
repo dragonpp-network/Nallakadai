@@ -386,8 +386,8 @@ export async function submitCustomerOrderAction(data: {
     if (data.deliveryMode) existingOrder.delivery_mode = data.deliveryMode;
     if (data.address !== undefined) existingOrder.delivery_address = data.address;
     if (data.note !== undefined) existingOrder.note = data.note;
-    if (data.couponCode) existingOrder.coupon_code = data.couponCode;
-    if (data.discountAmount) existingOrder.discount_amount = data.discountAmount;
+    existingOrder.coupon_code = data.couponCode || null;
+    existingOrder.discount_amount = data.discountAmount || 0;
     existingOrder.updated_at = new Date().toISOString();
   } else {
     // 3. New Initial Order for this open cycle
