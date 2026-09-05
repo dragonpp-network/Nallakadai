@@ -50,8 +50,22 @@ export function ImageUploader({
     setProcessing(true);
     try {
       const resized = await resizeImageToMaxDimension(file, maxDimension);
-      notifyChange(resized);
-      toast.success("Image uploaded & scaled to max 1024x1024!");
+      
+      // Upload to server endpoint to save as binary file in /app/data/uploads/
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dataUrl: resized }),
+      });
+      const data = await res.json();
+      
+      if (data?.url) {
+        notifyChange(data.url);
+        toast.success("Image uploaded & stored safely on persistent volume!");
+      } else {
+        notifyChange(resized);
+        toast.success("Image processed & ready!");
+      }
     } catch (err: any) {
       toast.error(err.message || "Failed to process image");
     } finally {

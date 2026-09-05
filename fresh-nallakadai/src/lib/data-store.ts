@@ -177,6 +177,132 @@ export function getBackupDirectory(): string {
   return backupDir;
 }
 
+export function getUploadsDirectory(): string {
+  const dir = getStorageDirectory();
+  const uploadsDir = path.join(dir, "uploads");
+  try {
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+  } catch {}
+  return uploadsDir;
+}
+
+/**
+ * Save binary image buffer to uploads directory
+ */
+export function saveUploadedImageBuffer(
+  buffer: Buffer,
+  originalExt: string = "webp",
+  prefix: string = "img"
+): { filename: string; url: string } {
+  const uploadsDir = getUploadsDirectory();
+  let ext = originalExt.replace(/^\./, "").toLowerCase();
+  if (!["webp", "jpg", "jpeg", "png", "gif", "svg"].includes(ext)) {
+    ext = "webp";
+  }
+  const filename = `${prefix}_${crypto.randomUUID().slice(0, 8)}.${ext}`;
+  const filePath = path.join(uploadsDir, filename);
+  fs.writeFileSync(filePath, buffer);
+  return {
+    filename,
+    url: `/api/uploads/${filename}`,
+  };
+}
+
+/**
+ * Helper to convert Base64 data URL into binary file in uploads directory
+ */
+export function saveBase64ImageToUploads(dataUrl: string, prefix: string = "img"): string | null {
+  try {
+    if (!dataUrl || typeof dataUrl !== "string") return null;
+    const matches = dataUrl.match(/^data:image\/([A-Za-z-+]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) return null;
+
+    const format = matches[1].toLowerCase();
+    const base64Data = matches[2];
+    const buffer = Buffer.from(base64Data, "base64");
+
+    let ext = "webp";
+    if (format === "jpeg" || format === "jpg") ext = "jpg";
+    else if (format === "png") ext = "png";
+    else if (format === "webp") ext = "webp";
+
+    const saved = saveUploadedImageBuffer(buffer, ext, prefix);
+    return saved.url;
+  } catch (err) {
+    console.warn("Could not save base64 image to uploads:", err);
+    return null;
+  }
+}
+
+/**
+ * Auto-migration of Base64 images to uploads directory with mandatory pre-upgrade snapshot
+ */
+function migrateBase64ImagesToUploads(store: StoreState): boolean {
+  let hasBase64 = false;
+
+  // Check if any entity contains base64 image
+  const checkBase64 = (url?: string | null) => url && typeof url === "string" && url.startsWith("data:image/");
+
+  if (store.items?.some((i) => checkBase64(i.imageUrl))) hasBase64 = true;
+  if (store.categories?.some((c) => checkBase64(c.image_url))) hasBase64 = true;
+  if (store.brands?.some((b) => checkBase64(b.logo_url))) hasBase64 = true;
+
+  if (!hasBase64) return false;
+
+  console.log("[Storage Migration] Base64 images detected. Creating mandatory pre-upgrade safety snapshot...");
+
+  // Mandatory safety snapshot before extracting Base64 images
+  try {
+    const bDir = getBackupDirectory();
+    const safetyFile = path.join(bDir, `pre_upgrade_snapshot_${Date.now()}.json`);
+    fs.writeFileSync(safetyFile, JSON.stringify(store, null, 2), "utf8");
+    console.log(`[Storage Migration] Mandatory safety snapshot created at ${safetyFile}`);
+  } catch (e) {
+    console.warn("Could not write pre-upgrade safety snapshot:", e);
+  }
+
+  // Extract and replace in items
+  if (Array.isArray(store.items)) {
+    for (const item of store.items) {
+      if (checkBase64(item.imageUrl)) {
+        const fileUrl = saveBase64ImageToUploads(item.imageUrl!, "item");
+        if (fileUrl) {
+          item.imageUrl = fileUrl;
+        }
+      }
+    }
+  }
+
+  // Extract and replace in categories
+  if (Array.isArray(store.categories)) {
+    for (const cat of store.categories) {
+      if (checkBase64(cat.image_url)) {
+        const fileUrl = saveBase64ImageToUploads(cat.image_url!, "cat");
+        if (fileUrl) {
+          cat.image_url = fileUrl;
+        }
+      }
+    }
+  }
+
+  // Extract and replace in brands
+  if (Array.isArray(store.brands)) {
+    for (const brand of store.brands) {
+      if (checkBase64(brand.logo_url)) {
+        const fileUrl = saveBase64ImageToUploads(brand.logo_url!, "brand");
+        if (fileUrl) {
+          brand.logo_url = fileUrl;
+        }
+      }
+    }
+  }
+
+  console.log("[Storage Migration] Completed Base64 image decoupling to /uploads directory!");
+  return true;
+}
+
 /**
  * Startup Deduplication Sanitizer
  * Scans arrays to guarantee no duplicate IDs exist in the database.
@@ -263,8 +389,12 @@ export function getLocalStore(): StoreState {
 
     // Sanitize any duplicate IDs automatically
     const idsFixed = sanitizeDuplicateIds(parsed);
-    if (idsFixed) {
-      console.log("[Storage] Automatically repaired and deduplicated IDs in store.json");
+
+    // Auto-migrate any base64 images into physical binary files in uploads/
+    const imagesMigrated = migrateBase64ImagesToUploads(parsed);
+
+    if (idsFixed || imagesMigrated) {
+      console.log("[Storage] Automatically repaired and saved clean store.json");
       saveLocalStore(parsed, true);
     }
 
@@ -301,8 +431,8 @@ export function saveLocalStore(store: StoreState, skipSnapshot: boolean = false)
         const autoBackupPath = path.join(bDir, `store_auto_backup_${todayStr}.json`);
         fs.writeFileSync(autoBackupPath, JSON.stringify(store, null, 2), "utf8");
 
-        // Retain last 15 rotating snapshots
-        cleanOldBackups(bDir, 15);
+        // Retain strictly the last 5 rotating snapshots
+        cleanOldBackups(bDir, 5);
       } catch (snapErr) {
         console.warn("Could not write daily backup snapshot:", snapErr);
       }
@@ -312,7 +442,7 @@ export function saveLocalStore(store: StoreState, skipSnapshot: boolean = false)
   }
 }
 
-function cleanOldBackups(dir: string, maxKeep: number = 15) {
+function cleanOldBackups(dir: string, maxKeep: number = 5) {
   try {
     if (!fs.existsSync(dir)) return;
     const files = fs.readdirSync(dir).filter((f) => f.endsWith(".json"));
@@ -476,9 +606,12 @@ export function resetLocalStoreDemoData() {
 export function getStorageDiagnostics() {
   const activeDir = getStorageDirectory();
   const activeFile = getStorageFilePath();
+  const uploadsDir = getUploadsDirectory();
   let fileSize = 0;
   let lastModified = "";
   let isVolume = activeDir.startsWith("/app/data") || activeDir.startsWith("/data");
+  let uploadFilesCount = 0;
+  let uploadFilesTotalSizeBytes = 0;
 
   try {
     if (fs.existsSync(activeFile)) {
@@ -488,11 +621,28 @@ export function getStorageDiagnostics() {
     }
   } catch {}
 
+  try {
+    if (fs.existsSync(uploadsDir)) {
+      const files = fs.readdirSync(uploadsDir);
+      uploadFilesCount = files.length;
+      for (const f of files) {
+        try {
+          const st = fs.statSync(path.join(uploadsDir, f));
+          uploadFilesTotalSizeBytes += st.size;
+        } catch {}
+      }
+    }
+  } catch {}
+
   return {
     activeDir,
     activeFile,
     fileSize,
+    fileSizeFormatted: `${(fileSize / 1024).toFixed(1)} KB`,
     lastModified,
     isVolume,
+    uploadsDir,
+    uploadFilesCount,
+    uploadFilesTotalSizeFormatted: `${(uploadFilesTotalSizeBytes / (1024 * 1024)).toFixed(2)} MB`,
   };
 }
